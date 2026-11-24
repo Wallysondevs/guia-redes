@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tipos de registro DNS: A, AAAA, CNAME, MX, TXT, NS, SOA, PTR | Guia Redes</title>
+<meta name="description" content="Cada registro DNS é um campo da agenda do domínio: A (IPv4), AAAA (IPv6), CNAME (apelido), MX (servidor de e-mail, com prioridade), TXT (texto de verificação), NS (servidores autoritativos), SOA (dados administrativos) e PTR (reverso, IP → nome). Como consultar cada tipo com dig HOST TIPO e descobrir os NS com whois. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Registros DNS</span> — os campos da agenda</h1>
+
+<p class="intro">Um domínio não tem só um número de telefone: a agenda dele tem vários <strong>campos</strong>. No DNS, cada campo é um <strong>tipo de registro</strong>. Pense na agenda de um contato: telefone fixo (A), celular novo (AAAA), apelido (CNAME), e-mail (MX), recado no rodapé (TXT).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os principais tipos de registro: <code>A</code>, <code>AAAA</code>, <code>CNAME</code>, <code>MX</code>, <code>TXT</code>, <code>NS</code>, <code>SOA</code>, <code>PTR</code>.</li>
+  <li>Consultar um tipo específico: <code>dig exemplo.com MX</code>.</li>
+  <li>Descobrir os servidores autoritativos (NS) de um domínio com <code>whois</code>.</li>
+  <li>As pegadinhas: CNAME não pode existir no domínio raiz; TXT é usado para provar posse do domínio.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Os principais tipos de registro</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo</th><th>O que guarda</th><th>Exemplo</th></tr>
+<tr><td><code>A</code></td><td>O endereço <strong>IPv4</strong> de um nome.</td><td><code>exemplo.com → 93.184.216.34</code></td></tr>
+<tr><td><code>AAAA</code></td><td>O endereço <strong>IPv6</strong> de um nome.</td><td><code>exemplo.com → 2606:2800:220:1:…</code></td></tr>
+<tr><td><code>CNAME</code></td><td>Um <strong>apelido</strong>: aponta para outro nome.</td><td><code>www.exemplo.com → exemplo.com</code></td></tr>
+<tr><td><code>MX</code></td><td>O <strong>servidor de e-mail</strong> do domínio, com prioridade (número menor = tenta primeiro).</td><td><code>exemplo.com → 10 mail.exemplo.com</code></td></tr>
+<tr><td><code>TXT</code></td><td><strong>Texto livre</strong> — SPF de e-mail, DKIM, ou prova de que você é o dono do domínio.</td><td><code>"v=spf1 include:_spf.exemplo.com ~all"</code></td></tr>
+<tr><td><code>NS</code></td><td>Quais servidores são <strong>autoritativos</strong> pelo domínio.</td><td><code>exemplo.com → ns1.exemplo.com</code></td></tr>
+<tr><td><code>SOA</code></td><td>Dados <strong>administrativos</strong> da zona: contato do responsável, serial, tempos de cache.</td><td>início da zona <code>exemplo.com</code></td></tr>
+<tr><td><code>PTR</code></td><td>O <strong>reverso</strong>: de IP para nome.</td><td><code>93.184.216.34 → exemplo.com</code></td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Consultando um tipo específico</h2>
+<p>O <code>dig</code> aceita o tipo como segundo argumento. No simulador, a resposta mostra o tipo pedido na QUESTION e na ANSWER:</p>
+<pre class="term">$ dig exemplo.com A
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 4821
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;exemplo.com.           IN      A
+
+;; ANSWER SECTION:
+exemplo.com.            3600    IN      A       93.184.216.34
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)
+$ dig exemplo.com MX
+;; QUESTION SECTION:
+;exemplo.com.           IN      MX
+
+;; ANSWER SECTION:
+exemplo.com.            3600    IN      MX      93.184.216.34
+
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+<p>Num servidor DNS real, cada tipo traz o seu dado próprio (o MX mostra o servidor de e-mail e a prioridade; o TXT, o texto; e por aí vai).</p>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> pegue o registro A (o IP) de exemplo.com: <code>dig exemplo.com +short</code></p>
+</div>
+
+<div class="try" data-goal="MX" data-solucao="dig exemplo.com MX">
+<p class="try-task"><strong>Missão:</strong> consulte o registro de e-mail do domínio: <code>dig exemplo.com MX</code> — ache o tipo <code>MX</code> na resposta</p>
+</div>
+
+<hr>
+
+<h2>Descobrindo os NS com whois</h2>
+<p>O <code>whois</code> consulta o registro do domínio (quem registrou, quando, e quais são os servidores de nome):</p>
+<pre class="term">$ whois exemplo.com
+Domain Name: EXEMPLO.COM
+Registry: Verisign
+Creation Date: 1995-08-14
+Name Server: NS1.EXEMPLO.COM</pre>
+<p>A linha <code>Name Server</code> mostra o registro <strong>NS</strong>: é para esse servidor que o resolver manda a pergunta final (aula <a href="como-dns-funciona.html">DNS a fundo</a>).</p>
+
+<div class="try" data-goal="Name Server" data-solucao="whois exemplo.com">
+<p class="try-task"><strong>Missão:</strong> descubra os servidores de nome do domínio: <code>whois exemplo.com</code></p>
+</div>
+
+<div class="try" data-goal="Non-authoritative answer" data-solucao="nslookup exemplo.com">
+<p class="try-task"><strong>Missão:</strong> compare com o <code>nslookup</code>, que traz a mesma resposta em formato mais simples: <code>nslookup exemplo.com</code></p>
+</div>
+
+<div class="warning">
+<strong>Duas pegadinhas importantes:</strong>
+<ul>
+  <li><code>CNAME</code> <strong>não pode existir no domínio raiz</strong> — você não pode fazer <code>exemplo.com</code> apontar para outro nome; só subdomínios (como <code>www.exemplo.com</code>) aceitam CNAME.</li>
+  <li><code>TXT</code> é muito usado para <strong>provar que você é o dono do domínio</strong>: Google, Microsoft e outros pedem um registro TXT específico antes de liberar um serviço.</li>
+</ul>
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Qual tipo de registro guarda o servidor de e-mail de um domínio?</p>
+<label><input type="radio" name="q1"> <code>A</code></label>
+<label><input type="radio" name="q1"> <code>MX</code></label>
+<label><input type="radio" name="q1"> <code>CNAME</code></label>
+<label><input type="radio" name="q1"> <code>SOA</code></label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Cada tipo de registro é um campo da agenda do domínio: <code>A</code>/<code>AAAA</code> (IPs), <code>CNAME</code> (apelido), <code>MX</code> (e-mail), <code>TXT</code> (texto/verificação), <code>NS</code> (autoritativos), <code>SOA</code> (admin), <code>PTR</code> (reverso).</li>
+  <li>Consulte com <code>dig HOST TIPO</code> (ex.: <code>dig exemplo.com MX</code>) e <code>dig HOST +short</code> para só o valor.</li>
+  <li><code>whois exemplo.com</code> mostra os <code>Name Server</code> (registros NS) e a data de criação do domínio.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="dig-avancado.html">dig avançado: +trace, +short, tipos específicos e @servidor</a> — as opções que transformam o dig numa lupa de DNS.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

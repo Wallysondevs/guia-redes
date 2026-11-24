@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portas comuns de rede (cola) — 22 SSH, 53 DNS, 80 HTTP, 443 HTTPS, 3306, 5432, 6379, 8080 | Guia Redes</title>
+<meta name="description" content="Cola das portas TCP/UDP mais usadas: 20/21 FTP, 22 SSH, 23 Telnet, 25/587 SMTP, 53 DNS, 67/68 DHCP, 80 HTTP, 110/143 e-mail, 443 HTTPS, 3306 MySQL, 5432 PostgreSQL, 6379 Redis, 8000/8080 desenvolvimento. Explica a analogia da porta como sala de um prédio, a divisão 0-1023 bem-conhecidas / 1024-49151 registradas / 49152+ dinâmicas, e mostra ss -tlnp na prática com missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Portas</span> comuns (cola)</h1>
+
+<p class="intro">Se o IP é o <strong>endereço do prédio</strong>, a porta é a <strong>sala dentro do prédio</strong>: o mesmo computador (IP <code>192.168.1.50</code>) pode ter o servidor web na sala 80, o SSH na sala 22 e o banco na sala 3306, tudo ao mesmo tempo. Esta cola lista as portas que você vai encontrar toda hora.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>As portas <strong>bem-conhecidas</strong> (0–1023): 20/21, 22, 25, 53, 80, 443…</li>
+  <li>As portas <strong>registradas</strong> de bancos e filas: 3306, 5432, 6379, 27017…</li>
+  <li>As portas de <strong>desenvolvimento</strong>: 3000, 8000, 8080, 8888…</li>
+  <li>A diferença entre porta <strong>TCP</strong> e <strong>UDP</strong> na mesma numeração (ex.: 53 nos dois).</li>
+  <li>Como ver as portas da sua máquina: <code>ss -tlnp</code> e <code>nc -zv</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Como as portas são divididas</h2>
+<dl class="anatomy">
+  <dt>0–1023 · bem-conhecidas (well-known)</dt><dd>Reservadas para serviços padrão do sistema (SSH, HTTP, DNS…). Só o root consegue abrir uma porta aqui.</dd>
+  <dt>1024–49151 · registradas</dt><dd>Atribuídas a programas específicos por registro (MySQL 3306, PostgreSQL 5432, Redis 6379…). Qualquer programa pode usar, mas é "de alguém".</dd>
+  <dt>49152–65535 · dinâmicas/privadas</dt><dd>Usadas pelo seu computador como <strong>porta de origem</strong> temporária em cada conexão que ele inicia (ephemeral).</dd>
+</dl>
+<p>Uma porta pode existir em <strong>TCP e UDP ao mesmo tempo, separadamente</strong> — o DNS, por exemplo, usa UDP 53 para consultas rápidas e TCP 53 para respostas grandes (transferência de zona).</p>
+
+<hr>
+
+<h2>As portas que você mais vai ver</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Porta</th><th>Proto</th><th>Serviço</th><th>Para que serve</th></tr>
+<tr><td><code>20</code>, <code>21</code></td><td>TCP</td><td>FTP (dados/controle)</td><td>Transferência de arquivos antiga (sem criptografia — hoje usa-se SFTP na 22).</td></tr>
+<tr><td><code>22</code></td><td>TCP</td><td>SSH / SFTP</td><td>Terminal remoto seguro e cópia de arquivos criptografada. <strong>A porta mais importante para administrar servidores.</strong></td></tr>
+<tr><td><code>23</code></td><td>TCP</td><td>Telnet</td><td>Terminal remoto antigo, <strong>sem criptografia</strong> (senha vai em texto puro). Evite.</td></tr>
+<tr><td><code>25</code>, <code>587</code></td><td>TCP</td><td>SMTP</td><td>Envio de e-mail entre servidores (25) e envio autenticado pelo cliente (587, com TLS).</td></tr>
+<tr><td><code>53</code></td><td>TCP + UDP</td><td>DNS</td><td>Tradução de nomes em IPs. UDP para consultas, TCP para respostas grandes.</td></tr>
+<tr><td><code>67</code>, <code>68</code></td><td>UDP</td><td>DHCP</td><td>Distribuição automática de IP na rede local (o roteador entrega 192.168.1.50 para a máquina da Ana).</td></tr>
+<tr><td><code>80</code></td><td>TCP</td><td>HTTP</td><td>Web sem criptografia. Redireciona para 443 hoje em dia.</td></tr>
+<tr><td><code>110</code> / <code>143</code></td><td>TCP</td><td>POP3 / IMAP</td><td>Recebimento de e-mail pelo cliente de e-mail (hoje, versions seguras: 993/995).</td></tr>
+<tr><td><code>443</code></td><td>TCP</td><td>HTTPS</td><td>HTTP + criptografia TLS. <strong>A porta padrão dos sites hoje.</strong></td></tr>
+<tr><td><code>3306</code></td><td>TCP</td><td>MySQL / MariaDB</td><td>Banco de dados relacional.</td></tr>
+<tr><td><code>5432</code></td><td>TCP</td><td>PostgreSQL</td><td>Banco de dados relacional.</td></tr>
+<tr><td><code>6379</code></td><td>TCP</td><td>Redis</td><td>Banco em memória (cache, filas, sessões).</td></tr>
+<tr><td><code>27017</code></td><td>TCP</td><td>MongoDB</td><td>Banco NoSQL de documentos.</td></tr>
+<tr><td><code>8000</code></td><td>TCP</td><td>HTTP alternativo</td><td>Porta clássica de desenvolvimento: <code>python3 -m http.server 8000</code> (projeto 1).</td></tr>
+<tr><td><code>8080</code></td><td>TCP</td><td>HTTP proxy/alternativo</td><td>Muito usada para publicar apps em porta alta (ex.: <code>-p 8080:80</code>).</td></tr>
+<tr><td><code>3000</code>, <code>5173</code></td><td>TCP</td><td>Dev (Node/Vite)</td><td>Portas típicas de servidores de desenvolvimento front-end.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Portas UDP importantes</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Porta</th><th>Serviço</th><th>Para que serve</th></tr>
+<tr><td><code>53/udp</code></td><td>DNS</td><td>Consultas DNS rápidas (sem conexão).</td></tr>
+<tr><td><code>67</code>, <code>68/udp</code></td><td>DHCP</td><td>Cliente (68) e servidor (67) de endereços automáticos.</td></tr>
+<tr><td><code>123/udp</code></td><td>NTP</td><td>Sincronização de relógio pela rede.</td></tr>
+<tr><td><code>161/udp</code></td><td>SNMP</td><td>Monitoramento de equipamentos de rede.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Veja as portas da sua máquina agora</h2>
+<pre class="term">$ ss -tlnp
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22           0.0.0.0:*     users:(("sshd",1012))
+TCP   LISTEN 0      128    0.0.0.0:8000         0.0.0.0:*     users:(("python3",2031))
+$ nc -zv localhost 8000
+Connection to localhost 8000 port [tcp/*] succeeded!</pre>
+<p>Leitura: <code>0.0.0.0:8000</code> = ouvindo em <strong>todos</strong> os IPs na porta 8000; <code>127.0.0.1:3000</code> seria só para o próprio computador (mais seguro para bancos de dados em desenvolvimento).</p>
+
+<div class="try" data-goal="0.0.0.0:8000" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> no simulador e ache a porta <code>8000</code> (e a <code>22</code>) em LISTEN.</p>
+</div>
+
+<div class="try" data-goal="succeeded" data-solucao="nc -zv exemplo.com 443">
+<p class="try-task"><strong>Missão:</strong> teste uma porta remota: rode <code>nc -zv exemplo.com 443</code> e veja <code>succeeded!</code>.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Porta = a sala dentro do prédio (IP). TCP e UDP são corredores separados com a mesma numeração.</li>
+  <li>0–1023 bem-conhecidas (22 SSH, 53 DNS, 80 HTTP, 443 HTTPS), 1024–49151 registradas (3306, 5432, 6379), 49152+ dinâmicas.</li>
+  <li>Veja as suas com <code>ss -tlnp</code>; teste uma porta com <code>nc -zv HOST PORTA</code>.</li>
+  <li>Porta de banco aberta para o mundo (0.0.0.0) é um risco — restrinja a 127.0.0.1 ou ao firewall.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="ref-status-http.html">Códigos de status HTTP (cola)</a> — 200, 301, 404, 500… o que cada resposta do servidor significa.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

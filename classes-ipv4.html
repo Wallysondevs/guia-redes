@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classes IPv4 (A, B, C, D, E) e por que hoje usamos CIDR | Guia Redes</title>
+<meta name="description" content="Um endereço IPv4 tem 32 bits divididos em 4 octetos (ex.: 192.168.1.50). As classes históricas — A (1–126), B (128–191), C (192–223), D (224–239, multicast) e E (240–255, experimental) — e por que o CIDR (a notação /24) substituiu o sistema de classes para não desperdiçar endereços. Exemplos com a rede da Ana (192.168.1.50/24) e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Classes <span class="hl">IPv4</span> e por que hoje usamos CIDR</h1>
+
+<p class="intro">Todo endereço IPv4 é um número de <strong>32 bits</strong> escrito como 4 grupos de 8 bits (os <strong>octetos</strong>), separados por ponto — por isso cada octeto vai de 0 a 255. Pense nele como o <strong>CEP completo de um prédio numa cidade enorme</strong>: os primeiros números indicam a região, os últimos, a porta dentro dela. Antigamente a internet dividia esses endereços em "classes" (A, B, C…). Hoje usamos <strong>CIDR</strong> (a notação <code>/24</code>) — nesta aula você entende as duas coisas.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A anatomia de um IPv4: 32 bits, 4 octetos de 0–255, ~4,3 bilhões de endereços.</li>
+  <li>As classes históricas: A, B, C, D (multicast) e E (experimental) e suas faixas.</li>
+  <li>Por que as classes desperdiçavam endereços e o CIDR (<code>/24</code>) foi criado.</li>
+  <li>Como ler <code>192.168.1.50/24</code> no comando <code>ip addr</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Anatomia de um endereço IPv4</h2>
+<p><code>192.168.1.50</code> são 4 octetos de 8 bits cada: <code>11000000.10101000.00000001.00110010</code> em binário — 32 bits no total, ou seja, 2³² = <strong>4.294.967.296 endereços</strong> possíveis.</p>
+<dl class="anatomy">
+  <dt>192</dt><dd>1º octeto (8 bits) — no sistema antigo de classes, indicava a "classe" do endereço.</dd>
+  <dt>168</dt><dd>2º octeto.</dd>
+  <dt>1</dt><dd>3º octeto — na rede da Ana, este grupo identifica a rede local (192.168.1.x).</dd>
+  <dt>50</dt><dd>4º octeto — identifica o computador dentro da rede (a máquina da Ana é a .50).</dd>
+</dl>
+
+<hr>
+
+<h2>As classes históricas</h2>
+<p>Nos anos 1980, os endereços foram divididos em classes conforme o valor do <strong>primeiro octeto</strong>. Cada classe tinha uma máscara fixa, que definia quantos bits eram da <strong>rede</strong> e quantos eram dos <strong>computadores (hosts)</strong>:</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Classe</th><th>Faixa do 1º octeto</th><th>Máscara padrão</th><th>Hosts por rede</th><th>Uso</th></tr>
+<tr><td><strong>A</strong></td><td>1 – 126</td><td>255.0.0.0 (/8)</td><td>~16,7 milhões</td><td>Pouquíssimas organizações enormes</td></tr>
+<tr><td><strong>B</strong></td><td>128 – 191</td><td>255.255.0.0 (/16)</td><td>65.534</td><td>Universidades e grandes empresas</td></tr>
+<tr><td><strong>C</strong></td><td>192 – 223</td><td>255.255.255.0 (/24)</td><td>254</td><td>Redes pequenas — a mais comum em casas e escritórios</td></tr>
+<tr><td><strong>D</strong></td><td>224 – 239</td><td>—</td><td>—</td><td><strong>Multicast</strong> (um remetente fala para vários destinos, ex.: streaming de vídeo na rede local)</td></tr>
+<tr><td><strong>E</strong></td><td>240 – 255</td><td>—</td><td>—</td><td>Reservado para pesquisa/experimental — não usado na internet</td></tr>
+</table>
+</div>
+
+<div class="warning">
+<strong>A faixa 127 é especial</strong>
+<p>Embora esteja dentro da faixa da classe A (1–126… na verdade 127.x.x.x), o bloco <code>127.0.0.0/8</code> é reservado para <strong>loopback</strong>: o endereço <code>127.0.0.1</code> é "este próprio computador" (pense como ligar para a sua própria mesa). Nenhum pacote 127.x sai para a rede.</p>
+</div>
+
+<hr>
+
+<h2>Por que as classes acabaram: entra o CIDR</h2>
+<p>O sistema de classes era <strong>muito desperdiçador</strong>: uma empresa com 300 computadores precisava de uma rede classe B inteira — 65.534 endereços para usar 300. Com o crescimento da internet nos anos 1990, os IPv4 iam acabar. A solução foi o <strong>CIDR</strong> (Classless Inter-Domain Routing, 1993): em vez de classes fixas, cada rede anuncia <strong>quantos bits são dela</strong> — a notação <code>/n</code>.</p>
+<ul>
+  <li><code>192.168.1.0/24</code> = os primeiros 24 bits (192.168.1) são a rede; os 8 últimos são os hosts → 254 computadores. É a rede da casa da Ana.</li>
+  <li><code>10.0.0.0/8</code> = 8 bits de rede, 24 de hosts → milhões de máquinas (usado em redes internas grandes).</li>
+  <li>Hoje o que vale é o <strong>prefixo /n</strong>, não a "classe". A próxima aula (<a href="mascaras-subredes.html">Máscara de sub-rede e CIDR</a>) mostra como calcular isso na prática.</li>
+</ul>
+
+<hr>
+
+<h2>Veja na máquina da Ana</h2>
+<p>O comando <code>ip addr</code> mostra o endereço da placa de rede seguido do prefixo CIDR:</p>
+<pre class="term">$ ip addr
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP
+    link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.50/24 scope global eth0</pre>
+<p>Repare: <code>192.168.1.50/24</code> diz que a rede é <code>192.168.1.0/24</code> (classe C no sistema antigo, hoje simplesmente um /24) e a máquina é a .50 dentro dela.</p>
+
+<div class="try" data-goal="192.168.1.50/24" data-solucao="ip addr">
+<p class="try-task"><strong>Missão:</strong> rode <code>ip addr</code> no terminal e encontre a linha <code>inet 192.168.1.50/24</code> — o <code>/24</code> é o CIDR da rede da Ana.</p>
+</div>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig exemplo.com +short</code> e veja o IP público do servidor — repare que ele <em>não</em> começa com 192.168 (isso é assunto da aula <a href="ips-privados.html">IPs privados</a>).</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>IPv4 = 32 bits = 4 octetos de 0–255 (ex.: 192.168.1.50), ~4,3 bilhões de endereços.</li>
+  <li>Classes históricas: A (1–126, /8), B (128–191, /16), C (192–223, /24), D (224–239, multicast), E (240–255, reservado); 127.x é loopback.</li>
+  <li>As classes desperdiçavam endereços; o <strong>CIDR</strong> (notação <code>/n</code>) permite qualquer tamanho de rede.</li>
+  <li><code>ip addr</code> mostra o IP com o prefixo: <code>192.168.1.50/24</code>.</li>
+</ul>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Quantos octetos tem um endereço IPv4 e qual o valor máximo de cada um?</p>
+<label><input type="radio" name="q1"> 3 octetos de 0–255</label>
+<label><input type="radio" name="q1"> 4 octetos de 0–128</label>
+<label><input type="radio" name="q1"> 4 octetos de 0–255</label>
+<label><input type="radio" name="q1"> 8 octetos de 0–255</label>
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">No endereço <code>192.168.1.50</code>, a rede da casa da Ana é qual classe histórica?</p>
+<label><input type="radio" name="q2"> Classe A</label>
+<label><input type="radio" name="q2"> Classe C (192–223, máscara /24)</label>
+<label><input type="radio" name="q2"> Classe D</label>
+<label><input type="radio" name="q2"> Classe E</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="mascaras-subredes.html">Máscara de sub-rede e CIDR (/24, /16, /30)</a> — como calcular quantos IPs cabem em cada prefixo e para que serve a máscara 255.255.255.0.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

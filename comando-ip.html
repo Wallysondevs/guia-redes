@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comandos ip addr e ip route — seus IPs e suas rotas | Guia Redes</title>
+<meta name="description" content="Os comandos ip addr (ou ip a) e ip route (ou ip r): ver as interfaces de rede (lo 127.0.0.1/8 e eth0 192.168.1.50/24 com MAC aa:bb:cc:dd:ee:ff), entender inet, scope e state UP, ler a tabela de rotas (default via 192.168.1.1 = gateway padrão; 192.168.1.0/24 = rede local), e os comandos antigos equivalentes (ifconfig, route -n). Missões no simulador: ip addr e ip route.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Comandos <span class="hl">ip addr</span> e <span class="hl">ip route</span></h1>
+
+<p class="intro">Quem é a máquina na rede? Quais IPs ela tem e por onde saem os pacotes? O comando <code>ip</code> responde as duas perguntas: <code>ip addr</code> mostra os <strong>endereços</strong> (o "CEP" dela) e <code>ip route</code> mostra as <strong>rotas</strong> (os "caminhos" que os pacotes pegam). Nesta aula, tudo isso na máquina da Ana.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li><code>ip addr</code> (ou <code>ip a</code>): as interfaces de rede e seus IPs — <code>lo</code> (127.0.0.1) e <code>eth0</code> (192.168.1.50/24).</li>
+  <li>Ler a saída: <code>inet</code> (o IP/máscara), <code>link/ether</code> (o MAC) e <code>state UP</code>.</li>
+  <li><code>ip route</code> (ou <code>ip r</code>): a tabela de rotas — <code>default via 192.168.1.1</code> (o gateway) e a rede local.</li>
+  <li>Por que "default via …" é a <strong>porta de saída</strong> da rede local.</li>
+  <li>Os comandos antigos equivalentes: <code>ifconfig</code> e <code>route -n</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>ip addr: os endereços da máquina</h2>
+<p>Cada placa de rede do computador é uma <strong>interface</strong> com seu próprio IP. O notebook da Ana tem duas:</p>
+<pre class="term">$ ip addr
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UNKNOWN
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP
+    link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.50/24 scope global eth0</pre>
+<dl class="anatomy">
+  <dt>1: lo</dt><dd>A interface <strong>loopback</strong>: sempre existe, aponta para a própria máquina (<code>127.0.0.1</code>).</dd>
+  <dt>2: eth0</dt><dd>A placa de rede real (Ethernet/Wi-Fi), aqui <code>state UP</code> = ligada e funcionando.</dd>
+  <dt>link/ether aa:bb:cc:dd:ee:ff</dt><dd>O <strong>endereço MAC</strong>: a identidade física da placa na rede local (único no mundo).</dd>
+  <dt>inet 192.168.1.50/24</dt><dd>O <strong>IPv4</strong> da máquina + a máscara <code>/24</code>: "sou a casa 50 da rua 192.168.1".</dd>
+  <dt>scope global</dt><dd>O endereço vale para fora da máquina (diferente de <code>scope host</code>, só local).</dd>
+</dl>
+
+<div class="try" data-goal="inet 192.168.1.50/24" data-solucao="ip addr">
+<p class="try-task"><strong>Missão:</strong> digite <code>ip addr</code> e aperte <kbd>Enter</kbd>. Ache a linha <code>inet 192.168.1.50/24 scope global eth0</code> — o CEP do notebook da Ana.</p>
+</div>
+
+<hr>
+
+<h2>ip route: para onde vão os pacotes</h2>
+<p>A <strong>tabela de rotas</strong> é o GPS da máquina: diz por qual caminho cada pacote sai. Na rede da Ana:</p>
+<pre class="term">$ ip route
+default via 192.168.1.1 dev eth0 proto dhcp metric 100
+192.168.1.0/24   dev eth0 proto kernel scope link src 192.168.1.50 metric 100</pre>
+<dl class="anatomy">
+  <dt>default via 192.168.1.1</dt><dd>A rota <strong>padrão</strong>: tudo que não é da rede local vai para o gateway (o roteador). É a "porta de saída" da casa.</dd>
+  <dt>dev eth0</dt><dd>O pacote sai pela interface eth0 (a placa de rede).</dd>
+  <dt>192.168.1.0/24 … src 192.168.1.50</dt><dd>A rota da <strong>rede local</strong>: pacotes para 192.168.1.x vão direto, sem passar pelo gateway.</dd>
+</dl>
+<p>Resumo da lógica: "se o destino está na minha rua (192.168.1.x), vou direto; se não está, mando para o porteiro (gateway 192.168.1.1) e ele que se vire".</p>
+
+<div class="try" data-goal="default via 192.168.1.1" data-solucao="ip route">
+<p class="try-task"><strong>Missão:</strong> digite <code>ip route</code> e aperte <kbd>Enter</kbd>. A primeira linha deve ser <code>default via 192.168.1.1 dev eth0…</code> — a rota padrão pelo roteador.</p>
+</div>
+
+<hr>
+
+<h2>Os comandos antigos (ainda existem)</h2>
+<p>Antes do <code>ip</code>, usava-se <code>ifconfig</code> e <code>route -n</code> — muitos tutoriais ainda ensinam eles, e fazem a mesma coisa:</p>
+<pre class="term">$ ifconfig        « mesmo conteúdo do ip addr
+… inet 192.168.1.50/24 …
+$ route -n        « mesma tabela de rotas, formato antigo
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+default         192.168.1.1     0.0.0.0         UG    100    0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     100    0        0 eth0</pre>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>ip addr</code> lista interfaces e IPs: <code>lo</code> = 127.0.0.1 (si mesma), <code>eth0</code> = 192.168.1.50/24 + MAC.</li>
+  <li><code>ip route</code> mostra as rotas: <code>default via 192.168.1.1</code> (gateway, saída para a internet) e a rede local 192.168.1.0/24 (entrega direta).</li>
+  <li>Se <code>ip addr</code> não mostra IP em eth0, a máquina não pegou IP (aí entra o DHCP, no Nível 2).</li>
+  <li>Equivalentes antigos: <code>ifconfig</code> e <code>route -n</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="comando-ss.html">Comando ss/netstat: quais portas estão abertas</a> — agora que sabemos o IP da máquina, vamos ver os serviços que ela oferece (22 e 8000).</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

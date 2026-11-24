@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireshark: o tcpdump com interface gráfica (analisar .pcap, filtros, Follow TCP Stream) | Guia Redes</title>
+<meta name="description" content="O Wireshark é o analisador de pacotes gráfico: abre capturas ao vivo ou arquivos .pcap gerados pelo tcpdump -w e mostra cada pacote em 3 painéis (lista, detalhes por camada, bytes em hex). Como instalar (Linux: apt install wireshark + grupo wireshark; macOS/Windows: instalador oficial), filtros de exibição (dns, tcp.port == 443, ip.addr == 192.168.1.50, tcp.flags.syn == 1), colorização, 'Follow TCP Stream' para remontar a conversa, e a ética: só capture a sua própria rede. Missões no simulador com tcpdump e nmap.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Wireshark: tcpdump com <span class="hl">interface gráfica</span></h1>
+
+<p class="intro">O <code>tcpdump</code> imprime texto cru no terminal — ótimo para scripts, ruim para explorar. O <strong>Wireshark</strong> é o mesmo tcpdump com interface gráfica: ele captura ao vivo <em>ou</em> abre um arquivo <code>.pcap</code> (gerado pelo <code>tcpdump -w</code>) e mostra cada pacote numa janela com cores, filtros clicáveis e os detalhes de cada camada. Pense nele como a lupa de detetive da rede: você vê o handshake, a consulta DNS, o pedido HTTP — tudo separado bonitinho.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os 3 painéis do Wireshark: <strong>lista de pacotes</strong>, <strong>detalhes (árvore de camadas)</strong> e <strong>bytes em hex</strong>.</li>
+  <li>Filtros de exibição: <code>dns</code>, <code>tcp.port == 443</code>, <code>ip.addr == 192.168.1.50</code>, <code>tcp.flags.syn == 1</code>.</li>
+  <li><strong>Follow TCP Stream</strong>: remontar a conversa inteira (o HTTP dentro do TCP).</li>
+  <li>Como instalar e dar permissão de captura sem sudo.</li>
+  <li>A ética: só capture tráfego da sua própria rede, com permissão.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Os 3 painéis da tela</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Painel</th><th>O que mostra</th><th>Colunas/linhas típicas</th></tr>
+<tr><td><strong>1. Lista de pacotes</strong> (em cima)</td><td>Uma linha por pacote capturado, colorida por protocolo</td><td>No. · Time · Source · Destination · Protocol · Length · Info</td></tr>
+<tr><td><strong>2. Detalhes do pacote</strong> (meio)</td><td>O pacote desmontado camada por camada: Ethernet → IP → TCP/UDP → aplicação (DNS, HTTP…)</td><td>Frame → Ethernet II → Internet Protocol v4 → Transmission Control Protocol → Hypertext Transfer Protocol</td></tr>
+<tr><td><strong>3. Bytes</strong> (embaixo)</td><td>O pacote em hexadecimal e ASCII, byte a byte</td><td>offset em hex + bytes + texto legível</td></tr>
+</table>
+</div>
+<p>Clicar numa linha do painel 1 mostra aquele pacote nos painéis 2 e 3; clicar numa camada no painel 2 destaca os bytes dela no painel 3. É assim que você "desembrulha" o pacote: o endereço MAC no quadro Ethernet, o IP no pacote, a porta no segmento TCP, o pedido HTTP dentro dos dados.</p>
+
+<hr>
+
+<h2>Filtrando na tela (filtros de exibição)</h2>
+<p>Diferente do tcpdump (que filtra na captura), o Wireshark filtra na <strong>exibição</strong> — a captura continua completa, você só esconde linhas. Filtros úteis:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Filtro</th><th>Mostra só…</th></tr>
+<tr><td><code>dns</code></td><td>consultas e respostas DNS (porta 53)</td></tr>
+<tr><td><code>tcp.port == 443</code></td><td>pacotes TCP da porta 443 (HTTPS)</td></tr>
+<tr><td><code>ip.addr == 192.168.1.50</code></td><td>todo pacote que tem o IP da Ana (origem ou destino)</td></tr>
+<tr><td><code>tcp.flags.syn == 1</code></td><td>somente os SYN — você vê só os handshakes (aberturas de conexão)</td></tr>
+<tr><td><code>http</code> ou <code>http.request</code></td><td>pedidos HTTP (GET, POST…)</td></tr>
+<tr><td><code>tcp.stream eq 0</code></td><td>uma conversa TCP inteira, do início ao fim</td></tr>
+</table>
+</div>
+<p>As linhas ficam <strong>coloridas</strong> por protocolo (verde claro = TCP comum, preto = com erro, etc.) — dá para mudar em <em>View → Coloring Rules</em>.</p>
+
+<hr>
+
+<h2>Follow TCP Stream: a conversa remontada</h2>
+<p>O truque mais famoso: clique com o botão direito num pacote TCP e escolha <strong>Follow → TCP Stream</strong>. O Wireshark junta todos os pacotes daquela conexão (identificada pelo par de sockets) e mostra o conteúdo em texto plano, como se fosse um chat — é assim que se lê o pedido HTTP que o navegador mandou, linha por linha (<code>GET / HTTP/1.1</code>, <code>Host: …</code>, cabeçalhos…).</p>
+
+<hr>
+
+<h2>Instalando e capturando sem sudo</h2>
+<ul>
+  <li><strong>Linux (Debian/Ubuntu):</strong> <code>sudo apt install wireshark</code> — durante a instalação, diga "sim" para permitir que usuários comuns capturem; ou depois adicione seu usuário ao grupo: <code>sudo usermod -aG wireshark $USER</code> (precisa sair e entrar de novo).</li>
+  <li><strong>macOS / Windows:</strong> baixe o instalador oficial em wireshark.org (no Windows, o Npcap vem junto e dá a permissão de captura).</li>
+  <li>Para analisar um arquivo pronto (em vez de capturar ao vivo): <em>File → Open</em> e escolha o <code>.pcap</code> gravado pelo <code>tcpdump -w captura.pcap</code> (aula <a href="tcpdump-intro.html">tcpdump</a>).</li>
+</ul>
+
+<hr>
+
+<h2>Treine no simulador: gere tráfego para capturar</h2>
+<p>O simulador não tem Wireshark (é gráfico), mas tem o tcpdump — que gera exatamente o mesmo tipo de captura. Gere tráfego e "veja" os pacotes:</p>
+<pre class="term">$ tcpdump -i eth0
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:15:01.100001 IP 192.168.1.50.54321 > 93.184.216.34.443: Flags [S], seq 1548213, win 64240, length 0
+10:15:01.123456 IP 93.184.216.34.443 > 192.168.1.50.54321: Flags [S.], seq 9921045, ack 1548214, win 65535, length 0
+10:15:01.123500 IP 192.168.1.50.54321 > 93.184.216.34.443: Flags [.], ack 9921046, win 64240, length 0</pre>
+<p>Num Wireshark de verdade, essas mesmas 3 linhas seriam o handshake TCP que vimos na aula <a href="handshake-tcp.html">SYN/SYN-ACK/ACK</a> — só que clicáveis, coloridas e com cada campo explicado.</p>
+
+<div class="try" data-goal="tcpdump: listening" data-solucao="tcpdump -i eth0">
+<p class="try-task"><strong>Missão:</strong> rode <code>tcpdump -i eth0</code> no terminal simulado — é a mesma captura que o Wireshark mostraria em gráfico, só que em texto.</p>
+</div>
+
+<div class="try" data-goal="Nmap scan report" data-solucao="nmap exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>nmap exemplo.com</code> — o scan gera um monte de pacotes novos (SYN para várias portas). Se estivesse capturando com tcpdump/Wireshark agora, você veria todos eles na tela.</p>
+</div>
+
+<div class="warning">
+<strong>Ética e legalidade</strong>
+<p>Capturar tráfego de rede de <strong>outras pessoas</strong> sem permissão é crime (interceptação de telecomunicações) e antiético. Use o Wireshark/tcpdump só na sua própria máquina/rede, em ambientes de laboratório, ou com autorização explícita — é a ferramenta de diagnóstico, não de bisbilhotar.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Wireshark = tcpdump com GUI: captura ao vivo ou abre <code>.pcap</code>; 3 painéis (lista, camadas, hex).</li>
+  <li>Filtros de exibição: <code>dns</code>, <code>tcp.port == 443</code>, <code>ip.addr == …</code>, <code>tcp.flags.syn == 1</code>.</li>
+  <li><strong>Follow TCP Stream</strong> remonta a conversa inteira (ex.: o pedido HTTP dentro do TCP).</li>
+  <li>Instale com <code>apt install wireshark</code> (Linux) ou pelo site oficial; capture só sua própria rede.</li>
+  <li>No simulador, o <code>tcpdump</code> mostra os mesmos pacotes em texto.</li>
+</ul>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">No Wireshark, para ver somente os pacotes de abertura de conexão TCP (handshake), qual filtro de exibição você usa?</p>
+<label><input type="radio" name="q1"> <code>http</code></label>
+<label><input type="radio" name="q1"> <code>tcp.flags.syn == 1</code></label>
+<label><input type="radio" name="q1"> <code>port 80</code></label>
+<label><input type="radio" name="q1"> <code>arp</code></label>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Qual arquivo o <code>tcpdump -w captura.pcap</code> gera, que dá para abrir no Wireshark?</p>
+<label><input type="radio" name="q2"> Um .pcap — o formato padrão de captura de pacotes</label>
+<label><input type="radio" name="q2"> Um .log de texto</label>
+<label><input type="radio" name="q2"> Um .pcapng de vídeo</label>
+<label><input type="radio" name="q2"> Um .zip de fotos dos pacotes</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="metodos-http.html">Métodos HTTP: GET, POST, PUT, PATCH, DELETE</a> — agora que você sabe capturar e ler pacotes, vamos abrir a camada de aplicação: o que o navegador manda de verdade num pedido HTTP.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

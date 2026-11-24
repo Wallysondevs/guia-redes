@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comando dig e nslookup — perguntar ao DNS pela linha de comando | Guia Redes</title>
+<meta name="description" content="Os comandos dig e nslookup para consultar DNS pela linha de comando: anatomia (dig @servidor HOST TIPO +opção), saída completa do dig (HEADER, QUESTION, ANSWER, SERVER), +short (só o IP), +trace (a hierarquia raiz→TLD→autoritativo), tipos de registro (A, MX, NS…), o erro NXDOMAIN, nslookup como alternativa simples e /etc/resolv.conf. Missões no simulador: dig exemplo.com +short (93.184.216.34) e nslookup google.com (142.250.72.142).">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Comando <span class="hl">dig</span> / nslookup: perguntar ao DNS</h1>
+
+<p class="intro">O <code>dig</code> (Domain Information Groper) é a ferramenta de linha de comando para <strong>perguntar direto a um servidor DNS</strong> — como ligar para a telefonista em vez de olhar a agenda. Nesta aula: a anatomia do comando, a saída completa, o <code>+short</code> para scripts, o <code>+trace</code> que mostra a hierarquia, os tipos de registro e o erro NXDOMAIN.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A anatomia: <code>dig [@servidor] HOST [TIPO] [+opção]</code>.</li>
+  <li>Ler a saída completa: HEADER (status NOERROR/NXDOMAIN), QUESTION, ANSWER e SERVER (quem respondeu).</li>
+  <li><code>+short</code>: só a resposta (o IP) — perfeito para scripts.</li>
+  <li><code>+trace</code>: segue a hierarquia raiz → TLD → autoritativo.</li>
+  <li>Tipos de registro: A (IPv4), AAAA (IPv6), MX (e-mail), NS, CNAME…</li>
+  <li><code>nslookup</code>: a alternativa mais simples, e <code>/etc/resolv.conf</code> (quem é o DNS padrão da máquina).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Anatomia do comando</h2>
+<dl class="anatomy">
+  <dt>dig</dt><dd>O programa: consulta servidores DNS e mostra a resposta completa.</dd>
+  <dt>@8.8.8.8</dt><dd>Opcional: pergunta a <strong>qual servidor DNS</strong> (sem @, usa o padrão do sistema, 192.168.1.1).</dd>
+  <dt>exemplo.com</dt><dd>O <strong>nome</strong> que você quer traduzir.</dd>
+  <dt>A</dt><dd>O <strong>tipo de registro</strong>: A = endereço IPv4 (o padrão). Outros: AAAA, MX, NS, TXT…</dd>
+  <dt>+short</dt><dd>Opção de saída: imprime <strong>só a resposta</strong>, sem enfeite.</dd>
+</dl>
+
+<hr>
+
+<h2>A saída completa</h2>
+<pre class="term">$ dig exemplo.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 4821
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;exemplo.com.			IN	A
+
+;; ANSWER SECTION:
+exemplo.com.		3600	IN	A	93.184.216.34
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)
+;; MSG SIZE  rcvd: 64</pre>
+<ul>
+  <li><code>status: NOERROR</code> + <code>ANSWER: 1</code> — a consulta deu certo e veio 1 resposta.</li>
+  <li><code>ANSWER SECTION</code> — a resposta de verdade: <code>exemplo.com. 3600 IN A 93.184.216.34</code> (nome, TTL em segundos, tipo A, IP).</li>
+  <li><code>SERVER: 192.168.1.1#53</code> — quem respondeu (o DNS da rede local, na porta 53).</li>
+  <li><code>Query time: 12 msec</code> — quanto tempo a consulta levou.</li>
+</ul>
+
+<hr>
+
+<h2>+short: só o IP (para scripts)</h2>
+<pre class="term">$ dig exemplo.com +short
+93.184.216.34
+$ dig google.com +short
+142.250.72.142
+$ dig api.exemplo.com +short
+93.184.216.35</pre>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> digite <code>dig exemplo.com +short</code> e aperte <kbd>Enter</kbd>. A saída deve ser só o IP <code>93.184.216.34</code>.</p>
+</div>
+
+<hr>
+
+<h2>+trace: ver a hierarquia DNS funcionando</h2>
+<p>Com <code>+trace</code>, o dig começa pela <strong>raiz</strong> e vai descendo até o servidor autoritativo do domínio — mostra a agenda em camadas:</p>
+<pre class="term">$ dig exemplo.com +trace
+; &lt;&lt;&gt;&gt; DiG 9.18 &lt;&lt;&gt;&gt; +trace exemplo.com
+.                       518400  IN  NS  a.root-servers.net.
+;; Received 239 bytes from 192.168.1.1#53(192.168.1.1) in 4 ms
+
+com.                    172800  IN  NS  a.gtld-servers.net.
+
+exemplo.com.            86400   IN  NS  ns1.exemplo.com.
+
+exemplo.com.            3600    IN  A   93.184.216.34
+;; Query time: 38 msec
+;; SERVER: 8.8.8.8#53(8.8.8.8)</pre>
+
+<hr>
+
+<h2>Erro real: NXDOMAIN (nome não existe)</h2>
+<div class="warning">
+<strong>status: NXDOMAIN</strong>
+<pre class="term">$ dig site-que-nao-existe.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 7712
+;; QUESTION SECTION:
+;site-que-nao-existe.com.	IN	A
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+<p><code>NXDOMAIN</code> = Non-Existent Domain: a agenda telefônica disse que esse nome não está cadastrado. E se o servidor DNS estiver fora do ar, o erro é <code>connection timed out; no servers could be reached</code>.</p>
+</div>
+
+<hr>
+
+<h2>nslookup: a consulta simples</h2>
+<p>O <code>nslookup</code> faz a mesma pergunta com saída mais curtinha — bom para um teste rápido:</p>
+<pre class="term">$ nslookup google.com
+Server:		192.168.1.1
+Address:	192.168.1.1#53
+
+Non-authoritative answer:
+Name:	google.com
+Address: 142.250.72.142</pre>
+
+<div class="try" data-goal="142.250.72.142" data-solucao="nslookup google.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>nslookup google.com</code> e aperte <kbd>Enter</kbd>. Na resposta <code>Non-authoritative answer</code>, o número deve ser <code>142.250.72.142</code>.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>dig [@servidor] HOST [TIPO] [+opção]</code> — pergunta a um DNS e mostra tudo; <code>+short</code> mostra só o IP.</li>
+  <li>Saída completa: HEADER (status), QUESTION, ANSWER (o IP), SERVER (quem respondeu) e Query time.</li>
+  <li><code>+trace</code> mostra a hierarquia: raiz (.) → TLD (.com) → autoritativo (ns1.exemplo.com).</li>
+  <li><code>nslookup HOST</code> é a versão simples; o DNS padrão da máquina está em <code>/etc/resolv.conf</code>.</li>
+  <li>Nome inexistente = <code>NXDOMAIN</code>; servidor fora do ar = <code>connection timed out</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="comando-ip.html">Comandos ip addr e ip route</a> — ver os IPs, a máscara e as rotas da própria máquina (ana@notebook, 192.168.1.50/24).</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

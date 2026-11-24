@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como o pacote viaja até o destino: traceroute passo a passo (TTL) | Guia Redes</title>
+<meta name="description" content="O traceroute mostra cada roteador (salto/hop) pelo qual o pacote passa até chegar ao destino: ele manda sondas com TTL crescente (1, 2, 3…) e cada roteador responde 'tempo esgotado' (ICMP time exceeded), revelando seu IP. Anatomia de cada linha do traceroute, o que significam os '* * *', quem é o primeiro salto (seu gateway 192.168.1.1) e exemplo real para exemplo.com e google.com. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Como o pacote <span class="hl">viaja</span>: traceroute passo a passo</h1>
+
+<p class="intro">Quando o notebook da Ana acessa <code>exemplo.com</code>, o pacote não vai numa linha reta: ele passa por vários roteadores — o de casa, os do provedor, os de backbone — até chegar ao servidor. Cada roteador é um <strong>salto (hop)</strong>. O <code>traceroute</code> é a ferramenta que revela esse caminho. A analogia: é como mandar uma carta com um <strong>prazo de validade (TTL)</strong> que cada posto dos correios carimba e decrementa; quando o prazo zera, o posto manda um aviso de volta dizendo "eu sou o posto X e o prazo acabou". O traceroute manda cartas com prazo 1, 2, 3… e anota quem respondeu em cada etapa.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Como o traceroute usa o campo <strong>TTL</strong> do pacote + respostas ICMP "time exceeded".</li>
+  <li>A ler cada linha: número do salto, IP do roteador e os 3 tempos de ida e volta.</li>
+  <li>Quem é o 1º salto (sempre o seu gateway 192.168.1.1) e os últimos (a rede do destino).</li>
+  <li>O que significam os <code>* * *</code> (firewall que não responde — não é rede caída).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O truque do TTL</h2>
+<p>Todo pacote IP tem um campo <strong>TTL</strong> (Time To Live) — um contador que cada roteador <strong>decrementa em 1</strong>. Se o TTL chega a zero, o roteador <strong>descarta o pacote e manda um aviso ICMP "time exceeded"</strong> de volta para a origem. O TTL existe para o pacote não ficar circulando para sempre numa rota com erro (loop).</p>
+<p>O traceroute explora isso: ele manda 3 sondas com TTL=1 (o 1º roteador responde "excedido" e se revela), depois 3 com TTL=2 (o 2º roteador responde), depois TTL=3… até o destino responder de verdade. Juntando as respostas, ele monta o mapa do caminho.</p>
+
+<hr>
+
+<h2>Lendo o traceroute da Ana até exemplo.com</h2>
+<pre class="term">$ traceroute exemplo.com
+traceroute to exemplo.com (93.184.216.34), 30 hops max, 60 byte packets
+ 1  192.168.1.1        2.431 ms  3.105 ms  2.887 ms
+ 2  189.50.10.1       8.212 ms  9.004 ms  8.733 ms
+ 3  200.147.67.142   15.540 ms 14.982 ms 16.101 ms
+ 4  93.184.216.34    23.415 ms 22.908 ms 23.760 ms</pre>
+<dl class="anatomy">
+  <dt>traceroute to … (93.184.216.34)</dt><dd>O destino e o IP para onde o nome foi resolvido (via DNS). "30 hops max" = limite de saltos que ele vai tentar.</dd>
+  <dt>1  192.168.1.1</dt><dd><strong>1º salto: o roteador de casa</strong> (o gateway padrão) — sempre ele, em qualquer destino fora da rede local.</dd>
+  <dt>2  189.50.10.1</dt><dd>2º salto: roteador do provedor de internet da Ana (a "rua" depois da portaria do prédio).</dd>
+  <dt>3  200.147.67.142</dt><dd>3º salto: um roteador de backbone (a "rodovia" entre cidades).</dd>
+  <dt>4  93.184.216.34</dt><dd>4º salto: o próprio servidor de destino — a viagem acabou.</dd>
+  <dt>2.431 ms  3.105 ms  2.887 ms</dt><dd>Os <strong>3 tempos de ida e volta</strong> de cada sonda (ele manda 3 por salto para medir a variação).</dd>
+</dl>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Salto</th><th>Quem costuma ser</th></tr>
+<tr><td>1º</td><td><strong>Seu roteador/gateway</strong> (192.168.1.1) — se não aparecer, há problema na rede local</td></tr>
+<tr><td>2º–3º</td><td>Roteadores do seu provedor (ISP)</td></tr>
+<tr><td>meio do caminho</td><td>Backbones de operadoras (podem mostrar nomes como "embratel", "Telefonica"…)</td></tr>
+<tr><td>últimos</td><td>A rede do próprio destino (ex.: servidores do Google/exemplo.com)</td></tr>
+</table>
+</div>
+
+<div class="try" data-goal="traceroute to" data-solucao="traceroute exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>traceroute exemplo.com</code> e veja os saltos: o 1º é o 192.168.1.1 (seu gateway), o último é o próprio 93.184.216.34.</p>
+</div>
+
+<div class="try" data-goal="72.14.204.1" data-solucao="traceroute google.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>traceroute google.com</code> e encontre o salto <code>72.14.204.1</code> — um roteador do caminho até o Google.</p>
+</div>
+
+<div class="warning">
+<strong>O que significam os * * *</strong>
+<p>Se um salto aparece como <code>* * *</code>, aquele roteador <strong>não respondeu</strong> o ICMP "time exceeded" — normalmente porque um firewall bloqueia essas respostas. <strong>Não significa que a rede caiu</strong>: se os saltos seguintes aparecem, o pacote continuou passando por ali normalmente. Muitos roteadores simplesmente não respondem traceroute para não se denunciar.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>O pacote até um destino passa por vários roteadores (saltos); o 1º é sempre o seu gateway.</li>
+  <li>O traceroute manda sondas com <strong>TTL 1, 2, 3…</strong>; cada roteador que esgota o TTL responde "time exceeded" e se revela.</li>
+  <li>Cada linha mostra o IP do salto e 3 tempos de ida e volta; <code>* * *</code> = roteador que não respondeu (firewall), não necessariamente problema.</li>
+  <li>Use para diagnosticar "onde a conexão para": se trava no salto 2, o problema está no provedor; se no 1, na sua rede local.</li>
+</ul>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Por que o traceroute consegue descobrir cada roteador do caminho?</p>
+<label><input type="radio" name="q1"> Porque cada roteador envia um e-mail para o seu computador avisando que passou</label>
+<label><input type="radio" name="q1"> Porque ele manda pacotes com TTL crescente e cada roteador responde "time exceeded" ao zerar o TTL</label>
+<label><input type="radio" name="q1"> Porque o DNS devolve a lista de roteadores</label>
+<label><input type="radio" name="q1"> Porque o cabo de rede brilha em cada salto</label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">No traceroute de uma rede doméstica, quem é <strong>sempre o primeiro salto</strong>?</p>
+<label><input type="radio" name="q2"> O roteador/gateway da rede local (ex.: 192.168.1.1)</label>
+<label><input type="radio" name="q2"> O servidor DNS 8.8.8.8</label>
+<label><input type="radio" name="q2"> O próprio destino final</label>
+<label><input type="radio" name="q2"> O cabo submarino internacional</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="arp.html">ARP: traduzir IP em MAC na rede local</a> — antes de mandar o pacote para o 1º salto (o gateway), o computador precisa descobrir o endereço MAC dele. É o ARP quem faz essa tradução.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

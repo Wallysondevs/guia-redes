@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seu primeiro ping — o "alô, tem alguém aí?" da rede | Guia Redes</title>
+<meta name="description" content="Seu primeiro ping explicado passo a passo: o que o comando faz (envia pacotes ICMP echo e mede a resposta), como ler a saída (64 bytes from, icmp_seq, ttl, time, estatísticas de perda de pacotes), ping na rede local (gateway 192.168.1.1, resposta em 1–4 ms) vs na internet (exemplo.com, 20+ ms), e a opção -c para escolher quantos pacotes. Missões no terminal simulado: ping exemplo.com e ping -c 2 192.168.1.1.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Seu primeiro <span class="hl">ping</span></h1>
+
+<p class="intro">O <code>ping</code> é o comando mais famoso de redes: ele manda um pacotinho de teste (um "echo" do protocolo ICMP) para outro computador e espera a resposta — como gritar "alô, tem alguém aí?" num corredor e ouvir o eco. Nesta aula você roda o seu primeiro ping e aprende a ler cada campo da resposta.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que o <code>ping</code> faz: envia pacotes ICMP echo e mede se o destino responde e em quanto tempo.</li>
+  <li>A ler a resposta: <code>64 bytes from …</code>, <code>icmp_seq</code>, <code>ttl</code> e <code>time</code>.</li>
+  <li>O resumo no fim: pacotes transmitidos, recebidos e <strong>perda de pacotes</strong> (%).</li>
+  <li>A diferença de tempo: rede local (gateway, ~1 ms) vs internet (site, dezenas de ms).</li>
+  <li>A opção <code>-c N</code> para mandar só N pacotes (no simulador, o padrão é 4).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O primeiro comando</h2>
+<p>Na máquina da Ana (<code>ana@notebook</code>), pingue um site. O ping primeiro traduz o nome para IP (DNS) e depois manda os pacotes:</p>
+<pre class="term">$ ping exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+64 bytes from 93.184.216.34: icmp_seq=3 ttl=64 time=24.1 ms
+64 bytes from 93.184.216.34: icmp_seq=4 ttl=64 time=23.0 ms
+
+--- exemplo.com ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3000ms</pre>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping exemplo.com</code> e aperte <kbd>Enter</kbd>. Cada linha <code>64 bytes from 93.184.216.34</code> é um "alô" que voltou com resposta.</p>
+</div>
+
+<hr>
+
+<h2>Lendo a resposta, campo a campo</h2>
+<dl class="anatomy">
+  <dt>64 bytes from 93.184.216.34</dt><dd>Chegou resposta de 64 bytes vinda do IP 93.184.216.34 (o exemplo.com depois do DNS).</dd>
+  <dt>icmp_seq=1</dt><dd>O número de sequência do pacote — serve para conferir se nenhum se perdeu no caminho.</dd>
+  <dt>ttl=64</dt><dd>"Time to live": quantos roteadores o pacote ainda pode atravessar antes de ser descartado. Cada roteador no caminho tira 1.</dd>
+  <dt>time=23.4 ms</dt><dd>O tempo de ida e volta até o servidor e de volta — a "distância" em tempo.</dd>
+</dl>
+<p>E o resumo no fim: <code>4 packets transmitted, 4 received, 0% packet loss</code> — mandamos 4, voltaram 4, <strong>nenhum se perdeu</strong>. Se aparecer <code>100% packet loss</code>, o destino não respondió (rede fora do ar, firewall bloqueando, ou host inexistente).</p>
+
+<hr>
+
+<h2>Ping na rede local: o gateway responde em ~1 ms</h2>
+<p>Pingar algo <strong>na mesma rede local</strong> é muito mais rápido — não precisa sair para a internet. O roteador da Ana (<code>192.168.1.1</code>) responde em 1–4 ms:</p>
+<pre class="term">$ ping -c 2 192.168.1.1
+PING 192.168.1.1 (192.168.1.1) 56(84) bytes of data.
+64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=1.42 ms
+64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=1.18 ms
+
+--- 192.168.1.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms</pre>
+<p>A opção <code>-c 2</code> diz "manda só 2 pacotes" (o padrão seria 4).</p>
+
+<div class="try" data-goal="64 bytes from 192.168.1.1" data-solucao="ping -c 2 192.168.1.1">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping -c 2 192.168.1.1</code> e aperte <kbd>Enter</kbd>. Repare que o <code>time</code> é bem menor (~1 ms): o gateway está na mesma rede local.</p>
+</div>
+
+<hr>
+
+<h2>Para que serve o ping na vida real</h2>
+<ul>
+  <li><strong>"O site está no ar?"</strong> — <code>ping exemplo.com</code> diz se o servidor responde (se o firewall não bloquear ICMP).</li>
+  <li><strong>"Minha internet funciona?"</strong> — pingue o gateway (<code>192.168.1.1</code>): se ele responde e o site não, o problema está fora da sua rede.</li>
+  <li><strong>"Quanto tempo leva até lá?"</strong> — o <code>time=</code> mostra a latência; gamers e videochamadas sentem quando ele sobe.</li>
+</ul>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>ping HOST</code> manda pacotes de teste (ICMP echo) e mede a resposta: <code>64 bytes from … time=… ms</code>.</li>
+  <li>Cada resposta tem <code>icmp_seq</code> (sequência), <code>ttl</code> (saltos restantes) e <code>time</code> (ida e volta).</li>
+  <li>O resumo mostra a perda de pacotes: <code>0% packet loss</code> = tudo chegou.</li>
+  <li><code>-c N</code> limita o número de pacotes; rede local responde em ~1 ms, internet em dezenas de ms.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="primeiro-curl.html">Seu primeiro curl</a> — agora que sabemos que o servidor responde, vamos conversar com ele de verdade e receber uma página.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

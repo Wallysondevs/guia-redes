@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IPs privados (10.x, 172.16–31.x, 192.168.x) e públicos | Guia Redes</title>
+<meta name="description" content="As faixas de IPs privados da RFC 1918 — 10.0.0.0/8, 172.16.0.0/12 e 192.168.0.0/16 — que podem se repetir em toda rede local do mundo sem conflito, e os IPs públicos, únicos na internet. Endereços especiais: 127.0.0.1 (loopback) e 169.254.x.x (APIPA, quando o DHCP falha). Como ver os seus com ip addr e cat /etc/hosts, e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>IPs <span class="hl">privados</span> vs públicos</h1>
+
+<p class="intro">Imagine um prédio: o endereço da rua (ex.: "Rua das Flores, 100") é <strong>único no mundo</strong> — é o IP público. Já o número do apartamento (ex.: "apto 50") pode repetir em <em>todo</em> prédio da cidade — é o IP privado. Dentro do prédio todo mundo se acha pelo número do apto; na rua, só vale o endereço completo. Na internet acontece o mesmo: <code>192.168.1.50</code> existe em milhões de redes locais, mas na internet pública cada endereço precisa ser único.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>As três faixas de IPs <strong>privados</strong> da RFC 1918: <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code>.</li>
+  <li>O que é um IP <strong>público</strong> (roteável na internet, único no mundo).</li>
+  <li>Endereços especiais: <code>127.0.0.1</code> (loopback) e <code>169.254.x.x</code> (APIPA).</li>
+  <li>Como ver os IPs da sua máquina e o arquivo <code>/etc/hosts</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>As faixas privadas (RFC 1918)</h2>
+<p>O documento RFC 1918 reservou três blocos de endereços para redes internas — eles <strong>nunca</strong> são roteados na internet pública, então podem se repetir à vontade:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Faixa privada</th><th>Prefixo CIDR</th><th>De… até…</th><th>Quantidade</th><th>Uso típico</th></tr>
+<tr><td><code>10.x.x.x</code></td><td><code>10.0.0.0/8</code></td><td>10.0.0.0 – 10.255.255.255</td><td>~16,7 milhões</td><td>Grandes empresas, datacenters, redes de provedores internos</td></tr>
+<tr><td><code>172.16.x.x – 172.31.x.x</code></td><td><code>172.16.0.0/12</code></td><td>172.16.0.0 – 172.31.255.255</td><td>~1 milhão</td><td>Empresas médias, Docker, VMs (o Docker usa 172.17.x por padrão)</td></tr>
+<tr><td><code>192.168.x.x</code></td><td><code>192.168.0.0/16</code></td><td>192.168.0.0 – 192.168.255.255</td><td>65.536</td><td><strong>Casas e pequenos escritórios</strong> — a rede da Ana é 192.168.1.0/24</td></tr>
+</table>
+</div>
+<p>Repare na máscara: a /12 do 172 não é "172.12" — ela cobre de 172.16 até 172.31 (16 redes /16 dentro do /12). É a armadilha clássica de cálculo (veja <a href="mascaras-subredes.html">Máscaras e CIDR</a>).</p>
+
+<hr>
+
+<h2>IP público: o endereço único na internet</h2>
+<p>O IP público é o que o seu provedor empresta ao seu roteador e que aparece nos sites de "qual é o meu IP". Ele é <strong>único no mundo inteiro</strong> e é para ele que os servidores da internet mandam as respostas. Exemplo: o servidor do <code>exemplo.com</code> tem o IP público <code>93.184.216.34</code> — qualquer pessoa no planeta pode mandar pacotes para lá. O roteador da Ana, visto de fora, também tem um IP público (ex.: <code>200.100.50.10</code>); os computadores dentro da casa, não (isso é o <a href="nat.html">NAT</a>).</p>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig exemplo.com +short</code> e veja o IP <em>público</em> do exemplo.com. Compare com o <code>ip addr</code> da próxima missão: um é público, o outro é privado.</p>
+</div>
+
+<div class="try" data-goal="192.168.1.50/24" data-solucao="ip addr">
+<p class="try-task"><strong>Missão:</strong> rode <code>ip addr</code> e ache <code>192.168.1.50/24</code> — um IP <em>privado</em> da faixa 192.168.0.0/16. Ele só faz sentido dentro da rede local.</p>
+</div>
+
+<hr>
+
+<h2>Endereços especiais</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Endereço</th><th>Nome</th><th>Para que serve</th></tr>
+<tr><td><code>127.0.0.1</code> (todo 127.x.x.x)</td><td><strong>Loopback</strong> / localhost</td><td>"Este próprio computador" — o programa fala consigo mesmo sem sair pela placa de rede (ex.: servidor local em <code>http://localhost:8000</code>)</td></tr>
+<tr><td><code>169.254.x.x</code></td><td><strong>APIPA</strong> (link-local)</td><td>Endereço <em>provisório</em> que o próprio sistema inventa quando não consegue pegar IP no <a href="dhcp.html">DHCP</a> — sinal de "não consegui falar com ninguém"</td></tr>
+<tr><td><code>0.0.0.0</code></td><td>"Qualquer endereço"</td><td>Usado na configuração (ex.: servidor que escuta em todas as interfaces: <code>0.0.0.0:8000</code>)</td></tr>
+</table>
+</div>
+
+<div class="try" data-goal="64 bytes from 127.0.0.1" data-solucao="ping 127.0.0.1">
+<p class="try-task"><strong>Missão:</strong> rode <code>ping 127.0.0.1</code> — mesmo com o Wi-Fi desligado, o próprio computador responde. É o loopback funcionando.</p>
+</div>
+
+<hr>
+
+<h2>O arquivo /etc/hosts: nomes que valem só na sua máquina</h2>
+<p>Antes de perguntar ao DNS, o computador olha o <code>/etc/hosts</code> — uma "agenda local" de IP → nome. Na máquina da Ana:</p>
+<pre class="term">$ cat /etc/hosts
+127.0.0.1   localhost
+127.0.1.1   notebook
+192.168.1.50 notebook
+192.168.1.1  roteador gateway</pre>
+<p>Repare: <code>roteador</code> e <code>gateway</code> são apelidos locais para <code>192.168.1.1</code> — dá para dar <code>ping gateway</code> que funciona. O arquivo <code>/etc/resolv.conf</code> mostra os servidores DNS usados para todo o resto (aula <a href="dhcp.html">DHCP</a> mostra como ele é preenchido).</p>
+
+<div class="try" data-goal="roteador" data-solucao="cat /etc/hosts">
+<p class="try-task"><strong>Missão:</strong> rode <code>cat /etc/hosts</code> e veja que <code>192.168.1.1</code> tem os apelidos <code>roteador</code> e <code>gateway</code>.</p>
+</div>
+
+<div class="warning">
+<strong>Dois cuidados com IPs privados</strong>
+<ul>
+  <li><strong>Conflito de IP:</strong> se dois dispositivos na mesma rede tiverem o mesmo 192.168.1.50, a internet dos dois fica intermitente (a rede não sabe para quem entregar os pacotes).</li>
+  <li><strong>IP privado não alcança a internet:</strong> se você deu <code>ping 192.168.1.60</code> de fora da rede e não respondeu, não significa que o host está desligado — IPs privados simplesmente não são roteados para fora (só chegam lá via <a href="nat.html">NAT</a>).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Privados (RFC 1918): <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code> — podem repetir em toda rede local do mundo.</li>
+  <li>Público: único na internet, roteável, dado pelo provedor ao roteador.</li>
+  <li>Especiais: <code>127.0.0.1</code> = loopback (a própria máquina); <code>169.254.x.x</code> = APIPA (falha de DHCP).</li>
+  <li>Veja os seus com <code>ip addr</code>; apelidos locais ficam em <code>/etc/hosts</code>.</li>
+</ul>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Qual destes endereços <strong>não</strong> é uma faixa privada da RFC 1918?</p>
+<label><input type="radio" name="q1"> 10.0.0.0/8</label>
+<label><input type="radio" name="q1"> 172.16.0.0/12</label>
+<label><input type="radio" name="q1"> 172.32.0.0/16</label>
+<label><input type="radio" name="q1"> 192.168.0.0/16</label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">O que é o <code>127.0.0.1</code>?</p>
+<label><input type="radio" name="q2"> O loopback: um endereço que aponta para o próprio computador</label>
+<label><input type="radio" name="q2"> O gateway padrão de toda rede</label>
+<label><input type="radio" name="q2"> Um IP público do Google</label>
+<label><input type="radio" name="q2"> O broadcast de toda rede local</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="nat.html">NAT: vários computadores, um IP público</a> — como a rede da Ana faz vários IPs privados (192.168.1.x) saírem para a internet usando um único IP público.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

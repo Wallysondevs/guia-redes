@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tipos de registro DNS (cola) — A, AAAA, CNAME, MX, TXT, NS, SOA, PTR, SRV | Guia Redes</title>
+<meta name="description" content="Cola dos tipos de registro DNS: A (IPv4), AAAA (IPv6), CNAME (apelido), MX (e-mail), TXT (texto/verificação), NS (servidor de nome), SOA (início de autoridade), PTR (reverso), SRV (serviço) e CAA — com exemplo de cada, como consultar com dig (dig exemplo.com MX, dig +short, dig -x para PTR) e a saída real. Missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Tipos de <span class="hl">registro DNS</span> (cola)</h1>
+
+<p class="intro">O DNS é como uma <strong>agenda telefônica gigante e distribuída</strong>: cada domínio tem vários "cartões" (registros), e cada tipo de registro guarda uma informação diferente — para qual IP o site aponta, para onde vão os e-mails, qual o apelido… Esta cola lista os tipos que você vai encontrar toda hora e como consultar cada um com <code>dig</code>.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os registros principais: <strong>A</strong>, <strong>AAAA</strong>, <strong>CNAME</strong>, <strong>MX</strong>, <strong>TXT</strong>, <strong>NS</strong>, <strong>SOA</strong>, <strong>PTR</strong>, <strong>SRV</strong>, <strong>CAA</strong>.</li>
+  <li>Como consultar cada tipo: <code>dig exemplo.com MX</code>, <code>dig exemplo.com TXT</code>, <code>dig -x 93.184.216.34</code> (PTR)…</li>
+  <li>A diferença entre <code>A</code> (IPv4) e <code>AAAA</code> (IPv6), e por que CNAME não pode coexistir com outros registros no mesmo nome.</li>
+  <li>O que é TTL (o "tempo de validade" do cartão na agenda) e por que mudanças de DNS demoram para valer.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A tabela completa</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo</th><th>Guarda o quê</th><th>Exemplo</th><th>Consulta</th></tr>
+<tr><td><code>A</code></td><td>Nome → <strong>IPv4</strong></td><td><code>exemplo.com.  3600  IN  A  93.184.216.34</code></td><td><code>dig exemplo.com A</code> / <code>+short</code></td></tr>
+<tr><td><code>AAAA</code></td><td>Nome → <strong>IPv6</strong></td><td><code>exemplo.com.  3600  IN  AAAA  2606:2800:220:1:…</code></td><td><code>dig exemplo.com AAAA</code></td></tr>
+<tr><td><code>CNAME</code></td><td>Nome → <strong>outro nome</strong> (apelido)</td><td><code>www.exemplo.com.  IN  CNAME  exemplo.com.</code></td><td><code>dig www.exemplo.com CNAME</code></td></tr>
+<tr><td><code>MX</code></td><td>Servidor de <strong>e-mail</strong> do domínio (com prioridade)</td><td><code>exemplo.com.  86400  IN  MX  10 mail.exemplo.com.</code></td><td><code>dig exemplo.com MX</code></td></tr>
+<tr><td><code>TXT</code></td><td><strong>Texto livre</strong> (verificações, SPF, DKIM)</td><td><code>exemplo.com.  IN  TXT  "v=spf1 include:_spf.exemplo.com ~all"</code></td><td><code>dig exemplo.com TXT</code></td></tr>
+<tr><td><code>NS</code></td><td>Quais servidores de nome são <strong>autoritativos</strong> pelo domínio</td><td><code>exemplo.com.  86400  IN  NS  ns1.exemplo.com.</code></td><td><code>dig exemplo.com NS</code></td></tr>
+<tr><td><code>SOA</code></td><td>"Início de autoridade": contato do dono, nº de série, tempos de cache/refresh</td><td><code>exemplo.com.  IN  SOA  ns1.exemplo.com. hostmaster.exemplo.com. 2024010101 …</code></td><td><code>dig exemplo.com SOA</code></td></tr>
+<tr><td><code>PTR</code></td><td><strong>Reverso</strong>: IP → nome</td><td><code>34.216.184.93.in-addr.arpa.  IN  PTR  exemplo.com.</code></td><td><code>dig -x 93.184.216.34</code></td></tr>
+<tr><td><code>SRV</code></td><td>Onde fica um <strong>serviço</strong> (host + porta)</td><td><code>_sip._tcp.exemplo.com.  IN  SRV  10 60 5060 sip.exemplo.com.</code></td><td><code>dig _sip._tcp.exemplo.com SRV</code></td></tr>
+<tr><td><code>CAA</code></td><td>Quais autoridades de certificado podem emitir SSL para o domínio</td><td><code>exemplo.com.  IN  CAA  0 issue "letsencrypt.org"</code></td><td><code>dig exemplo.com CAA</code></td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Exemplos reais no terminal</h2>
+<pre class="term">$ dig exemplo.com +short
+93.184.216.34
+$ dig exemplo.com
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR
+;; ANSWER SECTION:
+exemplo.com.            3600    IN      A       93.184.216.34
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)
+$ dig exemplo.com MX
+;; ANSWER SECTION:
+exemplo.com.            86400   IN      MX      10 mail.exemplo.com.</pre>
+
+<div class="try" data-goal="NOERROR" data-solucao="dig exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig exemplo.com</code> (sem <code>+short</code>) e ache <code>status: NOERROR</code> no cabeçalho + o registro <code>A</code> na ANSWER SECTION.</p>
+</div>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> agora rode <code>dig exemplo.com +short</code> e veja que a saída fica só com o IP: <code>93.184.216.34</code>.</p>
+</div>
+
+<hr>
+
+<h2>Detalhes que fazem diferença</h2>
+<dl class="anatomy">
+  <dt>TTL (time to live)</dt><dd>O número antes do <code>IN</code> (ex.: <code>3600</code>) é o tempo em segundos que o resultado fica em cache. Mudar um registro com TTL alto demora para valer em todo lugar — é a <a href="propagacao-dns.html">propagação de DNS</a>.</dd>
+  <dt>CNAME não divide cartão</dt><dd>Se <code>www</code> é CNAME de <code>exemplo.com</code>, o <code>www</code> não pode ter A/MX/TXT próprios ao mesmo tempo — o DNS segue o apelido até o fim.</dd>
+  <dt>A vs AAAA</dt><dd>O mesmo nome pode ter os dois: o navegador tenta o IPv6 (AAAA) primeiro e cai no IPv4 (A) se não houver rota IPv6.</dd>
+  <dt>PTR (reverso)</dt><dd>Usado por servidores de e-mail para validar que o IP realmente pertence ao domínio que envia a mensagem (anti-spam).</dd>
+  <dt>Nome raiz</dt><dd>Todo nome termina com ponto: <code>exemplo.com.</code> — a raiz vazia. O <code>+short</code> esconde isso; o <code>dig</code> completo mostra.</dd>
+</dl>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>A</code>/<code>AAAA</code> = IP (v4/v6); <code>CNAME</code> = apelido; <code>MX</code> = e-mail; <code>TXT</code> = texto (SPF/verificação); <code>NS</code>/<code>SOA</code> = autoridades do domínio; <code>PTR</code> = reverso; <code>SRV</code> = serviço+porta; <code>CAA</code> = quem emite SSL.</li>
+  <li>Consulte com <code>dig TIPO</code>: <code>dig exemplo.com A +short</code>, <code>dig exemplo.com MX</code>, <code>dig -x IP</code>.</li>
+  <li>Nome inexistente = <code>NXDOMAIN</code> (veja <a href="problemas.html">problemas comuns</a>).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="glossario.html">Glossário A–Z</a> — todos os termos de rede do guia em ordem alfabética, com definição em português claro.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

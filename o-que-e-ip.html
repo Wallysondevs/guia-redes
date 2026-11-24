@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que é um endereço IP (IPv4) — o "CEP" do computador | Guia Redes</title>
+<meta name="description" content="O que é um endereço IP e por que ele é o 'CEP' do computador: IPv4 tem 4 números de 0 a 255 (32 bits), exemplo real 192.168.1.50, máscara /24 (rede vs máquina), loopback 127.0.0.1, IP público vs privado. Comando ip addr no terminal simulado: interfaces lo e eth0, MAC aa:bb:cc:dd:ee:ff e o inet 192.168.1.50/24. Missões com ping no gateway 192.168.1.1.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Endereço <span class="hl">IP</span>: o "CEP" do computador (IPv4)</h1>
+
+<p class="intro">No correio, cada casa tem um CEP único. Na rede, cada máquina tem um <strong>endereço IP</strong> único — é o "CEP" dela. Nesta aula você aprende o formato IPv4 (quatro números de 0 a 255), o que é a máscara <code>/24</code>, e vê o IP do notebook da Ana: <code>192.168.1.50</code>.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é um <strong>IPv4</strong>: 4 octetos, 32 bits, de <code>0.0.0.0</code> a <code>255.255.255.255</code>.</li>
+  <li>A analogia do CEP: o IP identifica <em>quem é</em> a máquina na rede.</li>
+  <li>Máscara de rede <code>/24</code>: a parte do IP que é a "rua" (rede) e a parte que é a "casa" (máquina).</li>
+  <li><code>127.0.0.1</code>: o endereço que aponta para a própria máquina (loopback).</li>
+  <li>IP privado (192.168…) vs IP público — uma rápida introducción.</li>
+  <li>Ver os IPs da máquina com <code>ip addr</code> e pingar o gateway <code>192.168.1.1</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O formato IPv4: quatro números</h2>
+<p>Um endereço IPv4 é formado por <strong>4 números de 0 a 255</strong> separados por ponto — são 4 "octetos" de 8 bits, ou 32 bits no total:</p>
+<dl class="anatomy">
+  <dt>192</dt><dd>1º octeto (8 bits)</dd>
+  <dt>.</dt><dd>separador</dd>
+  <dt>168</dt><dd>2º octeto</dd>
+  <dt>.</dt><dd>separador</dd>
+  <dt>1</dt><dd>3º octeto</dd>
+  <dt>.</dt><dd>separador</dd>
+  <dt>50</dt><dd>4º octeto — a "casa" dentro da rua</dd>
+</dl>
+<p>Na analogia do CEP: <code>192.168.1</code> é como o bairro/rua, e o último número (<code>50</code>) é a casa específica. Por isso o notebook da Ana se chama <code>192.168.1.50</code> — e o roteador da casa dela é o vizinho <code>192.168.1.1</code>.</p>
+
+<hr>
+
+<h2>A máscara /24: onde termina a rua e começa a casa</h2>
+<p>O IP vem sempre com uma <strong>máscara</strong> escrita assim: <code>/24</code>. Esse número diz <strong>quantos bits são da rede</strong> e quantos são da máquina:</p>
+<ul>
+  <li><code>192.168.1.50/24</code> → os 24 primeiros bits (<code>192.168.1</code>) identificam a <strong>rede</strong>; os 8 últimos bits (<code>50</code>) identificam a <strong>máquina</strong> dentro dela.</li>
+  <li>Na rede <code>192.168.1.0/24</code> cabem 254 máquinas: de <code>192.168.1.1</code> até <code>192.168.1.254</code>.</li>
+</ul>
+<p>É como o CEP + complemento: o CEP diz a rua, o complemento diz o número exato da casa.</p>
+
+<hr>
+
+<h2>Veja os IPs da sua máquina: ip addr</h2>
+<p>O comando <code>ip addr</code> (ou só <code>ip a</code>) lista as <strong>interfaces de rede</strong> — as "placas" do computador — e os IPs de cada uma. Na máquina da Ana existem duas:</p>
+<ul>
+  <li><code>lo</code> (loopback): o endereço <code>127.0.0.1</code>, que aponta para a <strong>própria máquina</strong> — serve para um programa conversar consigo mesmo sem sair de casa.</li>
+  <li><code>eth0</code>: a placa de rede de verdade, com o IP <code>192.168.1.50/24</code> e o endereço físico (MAC) <code>aa:bb:cc:dd:ee:ff</code>.</li>
+</ul>
+<pre class="term">$ ip addr
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UNKNOWN
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP
+    link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.50/24 scope global eth0</pre>
+
+<div class="try" data-goal="inet 192.168.1.50/24" data-solucao="ip addr">
+<p class="try-task"><strong>Missão:</strong> digite <code>ip addr</code> e aperte <kbd>Enter</kbd>. Procure a linha <code>inet 192.168.1.50/24</code> da interface <code>eth0</code> — esse é o "CEP" do notebook da Ana.</p>
+</div>
+
+<hr>
+
+<h2>Ping no vizinho: o gateway 192.168.1.1</h2>
+<p>Todo pacote que vai <strong>fora da rede local</strong> passa primeiro pelo <strong>gateway</strong> (roteador) — na rede da Ana, o <code>192.168.1.1</code>. Pingar o gateway é o primeiro teste de "minha rede local está viva":</p>
+<pre class="term">$ ping 192.168.1.1
+PING 192.168.1.1 (192.168.1.1) 56(84) bytes of data.
+64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=1.42 ms
+64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=1.18 ms
+
+--- 192.168.1.1 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms</pre>
+<p>Repare no <code>time=1.42 ms</code>: como o roteador está na <strong>mesma rede local</strong>, a resposta vem em 1–4 ms. Quando pingarmos um site na internet, o tempo sobe para dezenas de milissegundos — é a "distância" até lá.</p>
+
+<div class="try" data-goal="64 bytes from 192.168.1.1" data-solucao="ping 192.168.1.1">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping 192.168.1.1</code> e aperte <kbd>Enter</kbd>. Se o gateway responder com <code>64 bytes from 192.168.1.1</code>, sua rede local está no ar.</p>
+</div>
+
+<hr>
+
+<h2>IP privado e IP público (rapidamente)</h2>
+<p>Endereços que começam com <code>192.168…</code>, <code>10…</code> ou <code>172.16–31…</code> são <strong>privados</strong>: só existem dentro de uma rede local (casa, empresa, escola) e se repetem em milhões de lugares. Já um IP como <code>93.184.216.34</code> é <strong>público</strong>: único no mundo inteiro, roteável na internet. Quem faz a ponte entre os dois é o NAT do roteador (você verá no Nível 2).</p>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>IPv4 = 4 números de 0 a 255 (32 bits): é o "CEP" único da máquina na rede. O da Ana é <code>192.168.1.50</code>.</li>
+  <li>A máscara <code>/24</code> separa a parte da <strong>rede</strong> (192.168.1) da parte da <strong>máquina</strong> (.50).</li>
+  <li><code>127.0.0.1</code> (loopback) aponta para a própria máquina.</li>
+  <li><code>ip addr</code> mostra as interfaces (lo, eth0), os IPs e o MAC; <code>ping 192.168.1.1</code> testa o gateway local.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="portas.html">Portas: cada serviço tem seu número</a> — se o IP é o prédio, a porta é a sala onde o serviço atende.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

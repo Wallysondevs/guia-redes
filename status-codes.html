@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Códigos de status HTTP: 1xx a 5xx (200, 301, 404, 500…) | Guia Redes</title>
+<meta name="description" content="Todos os códigos de status HTTP explicados por classe: 1xx informação, 2xx sucesso (200, 201, 204), 3xx redirecionamento (301, 302, 304), 4xx erro do cliente (400, 401, 403, 404, 429) e 5xx erro do servidor (500, 502, 503). Como ler a linha de status com curl -i, a diferença entre 404 e 500 e entre 401 e 403. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Códigos de status</span> — o carimbo da resposta</h1>
+
+<p class="intro">Depois que o cliente manda a requisição (com seu <a href="metodos-http.html">método</a> e seus <a href="headers-http.html">headers</a>), o servidor responde começando por uma <strong>linha de status</strong> de 3 dígitos. Pense nela como o carimbo do correio dizendo o que aconteceu com a sua carta: "entregue", "mudou de endereço", "destinatário não existe", "problema no remetente".</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A ler a linha de status: <code>HTTP/1.1 404 Not Found</code>.</li>
+  <li>As <strong>5 classes</strong>: 1xx, 2xx, 3xx, 4xx e 5xx — e os códigos mais comuns de cada uma.</li>
+  <li>A diferença entre <code>404</code> e <code>500</code>, e entre <code>401</code> e <code>403</code>.</li>
+  <li>Ver os códigos na prática com <code>curl -i</code> no simulador.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A linha de status</h2>
+<pre class="file">HTTP/1.1 404 Not Found</pre>
+<dl class="anatomy">
+  <dt>HTTP/1.1</dt><dd>A <strong>versão</strong> do protocolo usada na resposta.</dd>
+  <dt>404</dt><dd>O <strong>código</strong> numérico — a máquina lê isso.</dd>
+  <dt>Not Found</dt><dd>A <strong>frase</strong> (reason phrase) — o humano lê isso.</dd>
+</dl>
+
+<hr>
+
+<h2>As cinco classes</h2>
+<p>O <strong>primeiro dígito</strong> diz a classe do resultado:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Classe</th><th>Significado</th><th>Códigos comuns</th></tr>
+<tr><td><code>1xx</code></td><td>Informação — "continue, estou processando".</td><td><code>100 Continue</code></td></tr>
+<tr><td><code>2xx</code></td><td><strong>Sucesso</strong> — deu tudo certo.</td><td><code>200 OK</code>, <code>201 Created</code>, <code>204 No Content</code></td></tr>
+<tr><td><code>3xx</code></td><td><strong>Redirecionamento</strong> — o recurso mora em outro endereço agora.</td><td><code>301 Moved Permanently</code>, <code>302 Found</code>, <code>304 Not Modified</code></td></tr>
+<tr><td><code>4xx</code></td><td><strong>Erro do cliente</strong> — a culpa é da requisição.</td><td><code>400 Bad Request</code>, <code>401 Unauthorized</code>, <code>403 Forbidden</code>, <code>404 Not Found</code>, <code>429 Too Many Requests</code></td></tr>
+<tr><td><code>5xx</code></td><td><strong>Erro do servidor</strong> — a culpa é do servidor.</td><td><code>500 Internal Server Error</code>, <code>502 Bad Gateway</code>, <code>503 Service Unavailable</code></td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Na prática, no simulador</h2>
+<p>A máquina da Ana acessa sites fictícios. Veja três respostas diferentes:</p>
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+
+&lt;html&gt;...&lt;h1&gt;Exemplo.com&lt;/h1&gt;...&lt;/html&gt;
+$ curl -i http://exemplo.com/nao-existe
+HTTP/1.1 404 Not Found
+Server: nginx/1.25.3
+Content-Type: text/html
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;
+$ curl -i https://api.exemplo.com/usuarios/999
+HTTP/2 404
+content-type: application/json
+
+{"erro":"usuário não encontrado"}</pre>
+<ul>
+  <li><code>200 OK</code> — a página existe e veio.</li>
+  <li><code>404 Not Found</code> — o servidor Procurou e <strong>não achou</strong> esse caminho (<code>/nao-existe</code>, ou o usuário 999). A URL estava certa, o recurso é que não existe.</li>
+  <li>Note que a API devolve o 404 em <strong>JSON</strong> (<code>{"erro":"usuário não encontrado"}</code>) — porque o cliente pediu JSON.</li>
+</ul>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> provoque um <code>200 OK</code>: <code>curl -i http://exemplo.com</code></p>
+</div>
+
+<div class="try" data-goal="404 Not Found" data-solucao="curl -i http://exemplo.com/nao-existe">
+<p class="try-task"><strong>Missão:</strong> provoque um <code>404</code> pedindo uma página que não existe: <code>curl -i http://exemplo.com/nao-existe</code></p>
+</div>
+
+<div class="try" data-goal="HTTP/2 404" data-solucao="curl -i https://api.exemplo.com/usuarios/999">
+<p class="try-task"><strong>Missão:</strong> veja o 404 em JSON da API: <code>curl -i https://api.exemplo.com/usuarios/999</code></p>
+</div>
+
+<div class="warning">
+<strong>Leia direito os erros:</strong>
+<ul>
+  <li><code>404</code> = "não achei esse endereço" — a culpa é de quem pediu (URL errada ou recurso apagado).</li>
+  <li><code>500</code> = "quebrei aqui dentro" — a culpa é do servidor (bug, banco fora do ar).</li>
+  <li><code>401 Unauthorized</code> = você não provou quem é (faltou login). <code>403 Forbidden</code> = você provou, mas não tem permissão.</li>
+  <li><code>429</code> = você fez requisições demais em pouco tempo (rate limit) — espere um pouco.</li>
+</ul>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">O que significa o código <code>404 Not Found</code>?</p>
+<label><input type="radio" name="q1"> O servidor está fora do ar</label>
+<label><input type="radio" name="q1"> A requisição foi enviada errada</label>
+<label><input type="radio" name="q1"> O recurso pedido não foi encontrado no servidor</label>
+<label><input type="radio" name="q1"> O cliente fez requisições demais</label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">Um site pediu login e você ainda não se autenticou. Qual código é o esperado?</p>
+<label><input type="radio" name="q2"> <code>401 Unauthorized</code></label>
+<label><input type="radio" name="q2"> <code>404 Not Found</code></label>
+<label><input type="radio" name="q2"> <code>500 Internal Server Error</code></label>
+<label><input type="radio" name="q2"> <code>301 Moved Permanently</code></label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>A resposta começa com <code>HTTP/x.y CÓDIGO frase</code> — 3 dígitos dizem o resultado.</li>
+  <li><strong>2xx</strong> deu certo (200 OK, 201 Created); <strong>3xx</strong> redirecionou (301, 302, 304); <strong>4xx</strong> erro seu (400, 401, 403, 404, 429); <strong>5xx</strong> erro do servidor (500, 502, 503); <strong>1xx</strong> é só informes.</li>
+  <li><code>404</code> = recurso não existe; <code>500</code> = servidor quebrou; <code>401</code> = faltou login; <code>403</code> = sem permissão.</li>
+  <li>Veja qualquer código na hora com <code>curl -i URL</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="curl-avancado.html">curl avançado: -i, -I, -v, -X, -d e JSON</a> — as opções que fazem o curl mostrar a conversa inteira e falar com APIs de verdade.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

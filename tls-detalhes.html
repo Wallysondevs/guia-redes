@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TLS a fundo: handshake, certificados, HSTS | Guia Redes</title>
+<meta name="description" content="TLS detalhado: o handshake passo a passo (ClientHello, ServerHello, certificado, troca de chaves ECDHE, Finished), anatomia do certificado X.509 (SAN, emissor, validade, assinatura), cadeia de confiança até a CA raiz, HSTS (Strict-Transport-Security) e erros reais (certificado expirado, nome errado, conteúdo misto). Missões com curl -i/-v no simulador vendo HSTS e a conexão.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">TLS</span> a fundo: handshake, certificados e HSTS</h1>
+
+<p class="intro">Na aula de <a href="https-tls.html">HTTPS</a> vimos o "cadeado" do navegador. Agora vamos abrir o cadeado: o <strong>TLS</strong> (Transport Layer Security) é o protocolo que criptografa a conversa entre cliente e servidor. Analogia: antes de trocar segredos, duas pessoas combinam um código na primeira frase e conferem se estão falando com a pessoa certa — o certificado é a "carteira de identidade" assinada por um cartório (a CA).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O <strong>handshake TLS</strong> passo a passo (ClientHello → ServerHello → certificado → chaves → Finished);</li>
+  <li>A anatomia de um <strong>certificado X.509</strong> e a cadeia de confiança até a CA raiz;</li>
+  <li>O que é <strong>HSTS</strong> e por que o header <code>Strict-Transport-Security</code> é tão importante;</li>
+  <li>Os erros reais de certificado (expirado, nome errado, CA desconhecida, conteúdo misto);</li>
+  <li>Ver HSTS e a conexão criptografada com <code>curl</code> no simulador.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O handshake passo a passo (TLS 1.3)</h2>
+<p>Quando a Ana abre <code>https://exemplo.com</code>, acontece uma conversa rápida antes dos dados:</p>
+
+<pre class="term">1. ClientHello →  cliente manda: versões que fala (TLS 1.3), cipher suites,
+                   SNI (o nome do site: exemplo.com) e uma chave efêmera
+2. ServerHello →  servidor escolhe a versão/algoritmo, manda a chave efêmera dele
+                   e o CERTIFICADO (com a chave pública do servidor)
+3. Verificação  →  cliente confere: o certificado é assinado por uma CA confiável?
+                   o nome bate (exemplo.com está no SAN)? não expirou?
+4. Troca de chaves →  com as chaves efêmeras (ECDHE), os dois calculam o MESMO
+                   segredo de sessão — sem nunca transmiti-lo pela rede
+5. Finished     →  os dois provam que calcularam o mesmo segredo; pronto!
+6. Dados        →  a partir daqui, TUDO vai criptografado (e autenticado) nessa sessão</pre>
+
+<p>No TLS 1.3 isso leva <strong>1 ida e volta</strong> (1-RTT) — no TLS 1.2 eram 2. O segredo de sessão usa criptografia de chave simétrica (rápida, ex.: AES-GCM/ChaCha20) para os dados, e a troca de chaves usa criptografia assimétrica (ECDHE) só no início.</p>
+
+<hr>
+
+<h2>Anatomia do certificado X.509</h2>
+
+<dl class="anatomy">
+  <dt>Subject / SAN</dt><dd>O nome do dono: hoje o campo importante é o <strong>SAN</strong> (Subject Alternative Name) — a lista de nomes cobertos (ex.: <code>exemplo.com</code> e <code>www.exemplo.com</code>). O navegador confere o nome que você digitou contra o SAN.</dd>
+  <dt>Emissor (Issuer)</dt><dd>A CA que assinou: ex.: "Let's Encrypt R3", "DigiCert TLS RSA SHA256". A assinatura prova que a CA aprova aquele nome+chave.</dd>
+  <dt>Validade (not before / not after)</dt><dd>O certificado tem prazo — quando expira, o navegador mostra o erro famoso "Seu conexão não é particular".</dd>
+  <dt>Chave pública</dt><dd>A chave do servidor (RSA ou EC). A chave privada correspondente fica <strong>secreta no servidor</strong> — se vazar, o certificado precisa ser revogado.</dd>
+  <dt>Assinatura</dt><dd>O hash do certificado cifrado com a chave privada da CA — é isso que o navegador verifica com a chave pública da CA.</dd>
+</dl>
+
+<h3>A cadeia de confiança</h3>
+<p>O navegador não conhece todas as CAs do mundo de fábrica — ele tem as <strong>CAs raiz</strong> (roots) pré-instaladas. O certificado do site vem assinado por uma <strong>CA intermediária</strong>, que por sua vez é assinada por uma raiz. O navegador monta essa corrente: certificado do site → intermediária → raiz conhecida → <strong>confia</strong>. É a mesma lógica de uma procuração em cadeia.</p>
+
+<pre class="term">raiz (no navegador, autoassinada)
+  └── CA intermediária (ex.: Let's Encrypt R3)
+        └── certificado de exemplo.com  ← o cadeado que você vê</pre>
+
+<hr>
+
+<h2>HSTS: "só fale HTTPS comigo"</h2>
+<p>O servidor manda o header <code>Strict-Transport-Security</code> e o navegador obedece: <strong>da próxima vez, nem tenta HTTP</strong> — já vai direto no HTTPS, mesmo se você digitar <code>http://</code>. Isso fecha o ataque de "downgrade" (alguém te forçando a usar HTTP puro no meio do caminho).</p>
+
+<pre class="term">Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+# max-age=31536000  → 1 ano em segundos
+# includeSubDomains → vale para todos os subdomínios
+# preload           → entra na lista pública de HSTS dos navegadores</pre>
+
+<hr>
+
+<h2>Erros reais de certificado</h2>
+
+<div class="warning">
+<strong>Os erros que o navegador mostra</strong>
+<ul>
+  <li><strong>Expirado</strong> (<code>ERR_CERT_DATE_INVALID</code>): passou da validade — renove (Let's Encrypt renova sozinho a cada 90 dias, mas precisa de automação).</li>
+  <li><strong>Nome não bate</strong> (<code>ERR_CERT_COMMON_NAME_INVALID</code>): você acessou <code>192.168.1.50</code> mas o certificado é de <code>exemplo.com</code> — normal em IP; em domínio público é sinal de ataque (DNS envenenado).</li>
+  <li><strong>CA desconhecida</strong> (<code>ERR_CERT_AUTHORITY_INVALID</code>): certificado autoassinado ou de CA interna não instalada no navegador.</li>
+  <li><strong>Conteúdo misto</strong> (mixed content): a página HTTPS carrega uma imagem por <code>http://</code> — o navegador bloqueia ou marca como inseguro.</li>
+</ul>
+<p><strong>Nunca clique em "continuar mesmo assim"</strong> em certificado inválido — em 99% das vezes é golpe; no resto, é configuração errada.</p>
+</div>
+
+<hr>
+
+<h2>Vendo TLS e HSTS no simulador</h2>
+
+<div class="try" data-goal="strict-transport-security: max-age=31536000" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão 1:</strong> rode <code>curl -i https://exemplo.com</code> e encontre o header <code>strict-transport-security: max-age=31536000</code> — o HSTS ligado no site HTTPS do simulador.</p>
+</div>
+
+<div class="try" data-goal="Connected to exemplo.com" data-solucao="curl -v https://exemplo.com">
+<p class="try-task"><strong>Missão 2:</strong> rode <code>curl -v https://exemplo.com</code> e veja <code>* Connected to exemplo.com (93.184.216.34) port 443</code> — a conexão TLS aberta na porta 443. Compare com <code>curl -i http://exemplo.com</code>, que responde <code>HTTP/1.1 200 OK</code> sem criptografia nem HSTS.</p>
+</div>
+
+<pre class="term">$ curl -i https://exemplo.com
+HTTP/2 200
+server: nginx/1.25.3
+content-type: text/html; charset=UTF-8
+strict-transport-security: max-age=31536000   ← HSTS: só HTTPS por 1 ano
+
+&lt;html&gt;…&lt;/html&gt;</pre>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>TLS criptografa a conversa: handshake (ClientHello/ServerHello), certificado verificado, chaves trocadas por ECDHE e dados cifrados em AES-GCM/ChaCha20.</li>
+  <li>Certificado X.509: SAN (nomes), emissor (CA), validade, chave pública e assinatura; a confiança vem da cadeia até uma CA raiz do navegador.</li>
+  <li><strong>HSTS</strong> (<code>Strict-Transport-Security: max-age=…</code>) obriga o navegador a usar só HTTPS — fecha ataques de downgrade.</li>
+  <li>Erros comuns: expirado, nome errado, CA desconhecida, conteúdo misto. Nunca ignore aviso de certificado.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="scan-portas-etico.html">Scan de portas ético (nmap)</a> — como descobrir quais portas um servidor deixou abertas (com ética e permissão).</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

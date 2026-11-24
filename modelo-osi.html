@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelo OSI: as 7 camadas | Guia Redes</title>
+<meta name="description" content="O modelo OSI explicado com a analogia do correio: as 7 camadas (Física, Enlace, Rede, Transporte, Sessão, Apresentação, Aplicação), o que cada uma faz, quais protocolos moram em cada uma (Ethernet, IP, TCP/UDP, HTTP/DNS) e por que cada camada só conversa com a vizinha. Tabela completa das camadas e missão de ping no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O modelo <span class="hl">OSI</span> e suas 7 camadas</h1>
+
+<p class="intro">Imagine que você vai mandar uma <strong>carta para outro país</strong>. Você não joga a carta no correio e pronto: você escreve o texto, coloca no envelope, escreve o CEP, o carteiro leva até a agência, a agência coloca no avião, passa pela alfândega do outro país, o carteiro local entrega… Cada etapa foi feita por uma pessoa diferente, e cada uma só conhece a etapa anterior e a seguinte. O modelo <strong>OSI</strong> é exatamente isso, só que para dados de computador: <strong>7 camadas</strong>, cada uma com uma responsabilidade.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é um "modelo de camadas" e por que cada camada só fala com a vizinha;</li>
+  <li>As <strong>7 camadas do OSI</strong>, de baixo para cima, com a função de cada uma;</li>
+  <li>Quais <strong>protocolos moram em cada camada</strong> (Ethernet, IP, TCP/UDP, HTTP, DNS…);</li>
+  <li>A analogia da carta nos correios e a regra de ouro: <em>quem manda é a camada de cima</em>;</li>
+  <li>Por que na prática usamos o modelo TCP/IP (próxima aula).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia da carta internacional</h2>
+<p>Quando a Ana manda uma carta de <code>ana@notebook</code> para um amigo em outro país:</p>
+<ul>
+  <li>Ela <strong>escreve o texto</strong> (camada 7 — aplicação: o conteúdo que faz sentido para humanos);</li>
+  <li>Escolhe <strong>idioma e formato</strong> (camada 6 — apresentação: criptografia e codificação, tipo "embaralhar" a carta para só o destinatário ler);</li>
+  <li>Combina <strong>como a conversa vai acontecer</strong> (camada 5 — sessão: "vamos nos falar às 15h?");</li>
+  <li>Escreve o <strong>endereço e o CEP</strong> no envelope (camada 4 — transporte: entrega fim a fim, com recibo);</li>
+  <li>O correio decide a <strong>rota</strong> (camada 3 — rede: "passa por São Paulo, depois Lisboa");</li>
+  <li>O carteiro local coloca no <strong>caminhão certo</strong> (camada 2 — enlace: entrega na rede local, pelo endereço MAC);</li>
+  <li>O caminhão anda pela <strong>estrada</strong> (camada 1 — física: cabos, luz, ondas de rádio).</li>
+</ul>
+<p>Repare a regra de ouro: <strong>cada camada só conversa com a mesma camada do outro lado</strong>, e só usa os serviços da camada de baixo. A carta (dados) vai descendo as camadas do remetente — cada uma coloca seu "envelope" — e subindo as camadas do destinatário, que vai tirando os envelopes.</p>
+
+<hr>
+
+<h2>As 7 camadas, de baixo para cima</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>#</th><th>Camada</th><th>Função (analogia do correio)</th><th>Protocolos / exemplos</th></tr>
+<tr><td>7</td><td><strong>Aplicação</strong></td><td>O conteúdo que o usuário vê: páginas, e-mail, mensagem.</td><td>HTTP/HTTPS, DNS, SMTP, SSH, FTP</td></tr>
+<tr><td>6</td><td><strong>Apresentação</strong></td><td>Tradução e proteção do conteúdo: codificação (UTF-8) e criptografia (TLS).</td><td>TLS, SSL, JPEG, MPEG, ASCII/UTF-8</td></tr>
+<tr><td>5</td><td><strong>Sessão</strong></td><td>Abre, gerencia e fecha a "conversa" entre as duas máquinas.</td><td>NetBIOS, RPC, SOCKS</td></tr>
+<tr><td>4</td><td><strong>Transporte</strong></td><td>Entrega fim a fim: divide em pedaços, numera, confirma recebimento (ou não).</td><td>TCP, UDP, portas (80, 443, 53…)</td></tr>
+<tr><td>3</td><td><strong>Rede</strong></td><td>Escolhe a rota pela internet usando endereços lógicos (IP).</td><td>IP (IPv4/IPv6), ICMP, BGP, OSPF, NAT</td></tr>
+<tr><td>2</td><td><strong>Enlace</strong> (link)</td><td>Entrega na rede local pelo endereço físico (MAC); detecta erros do trecho.</td><td>Ethernet, Wi-Fi (802.11), ARP, PPP, switches</td></tr>
+<tr><td>1</td><td><strong>Física</strong></td><td>O meio físico de verdade: cabos de cobre, fibra óptica, ondas de rádio.</td><td> cabos Cat6, fibra, conectores RJ45, sinais elétricos/luz/rádio</td></tr>
+</table>
+</div>
+
+<dl class="anatomy">
+  <dt>Camada 7–5 (superiores)</dt><dd>"Orientadas à aplicação": parece que o programa fala direto com o outro programa — na verdade, está descendo as camadas.</dd>
+  <dt>Camada 4 (transporte)</dt><dd>A que garante (TCP) ou não garante (UDP) a entrega. É onde moram as <strong>portas</strong> (aula <a href="portas.html">Portas</a>).</dd>
+  <dt>Camada 3 (rede)</dt><dd>É onde mora o <strong>IP</strong> e o roteamento entre redes (aulas <a href="o-que-e-ip.html">IP</a> e <a href="como-pacotes-viajam.html">traceroute</a>).</dd>
+  <dt>Camadas 2–1 (inferiores)</dt><dd>"Orientadas à rede": cuidam de entregar o pacote no trecho físico/local até o próximo salto.</dd>
+</dl>
+
+<hr>
+
+<h2>Por que em camadas?</h2>
+<p>Três vantagens enormes:</p>
+<ul>
+  <li><strong>Trocar uma peça sem desmontar tudo</strong>: seu Wi-Fi (camada 1–2) pode mudar para fibra sem o navegador (camada 7) nem saber;</li>
+  <li><strong>Cada fabricante cuida da sua</strong>: a placa de rede não precisa entender HTTP;</li>
+  <li><strong>Diagnóstico fácil</strong>: "o problema está na camada 3" já diz muito — é roteamento/IP, não cabo.</li>
+</ul>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>ping exemplo.com</code>. Esse ping desceu pelas 7 camadas do seu notebook e subiu pelas 7 do servidor — a resposta <code>64 bytes from …</code> é a camada 3 (ICMP) falando com a camada 3 do outro lado. Veja a próxima aula: <a href="icmp.html">ICMP</a>.</p>
+</div>
+
+<pre class="term">$ ping exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+
+--- exemplo.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss</pre>
+
+<div class="warning">
+<strong>OSI é teoria; a internet roda TCP/IP</strong>
+<p>O modelo OSI foi criado pela ISO como um <strong>manual de referência</strong> para ensinar e padronizar. Na prática, a internet inteira usa o modelo <strong>TCP/IP</strong> (4 camadas), que é o que vamos ver na próxima aula — e é ele que manda de verdade nos seus comandos do dia a dia.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>OSI divide a comunicação em rede em <strong>7 camadas</strong>: Física, Enlace, Rede, Transporte, Sessão, Apresentação, Aplicação (de baixo para cima: <strong>F-E-R-T-S-A-A</strong>).</li>
+  <li>Cada camada só fala com a vizinha e com a mesma camada do outro lado; os dados descem e sobem "embrulhados".</li>
+  <li>Protocolos por camada: HTTP/DNS (7), TLS (6), TCP/UDP + portas (4), IP/ICMP/BGP (3), Ethernet/Wi-Fi/ARP (2), cabos/luz/rádio (1).</li>
+  <li>Camadas facilitam diagnóstico ("falha na camada 3 = problema de IP/rota") e troca de tecnologia sem quebrar o resto.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="modelo-tcpip.html">Modelo TCP/IP: as 4 camadas que mandam de verdade</a> — o modelo que a internet usa de verdade, com a tabela comparativa OSI × TCP/IP.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

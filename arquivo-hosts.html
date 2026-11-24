@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/etc/hosts: o DNS local da sua máquina | Guia Redes</title>
+<meta name="description" content="O arquivo /etc/hosts mapeia nomes para IPs localmente e tem prioridade sobre o DNS: formato (IP nome apelido), os exemplos da máquina ana@notebook (roteador → 192.168.1.1), como testar na hora com ping roteador, para que serve (testar sites locais, apelidos na rede, bloquear sites) e os cuidados (precisa de admin e vale só na sua máquina). Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">/etc/hosts</span> — o DNS de rascunho da sua máquina</h1>
+
+<p class="intro">Antes de telefonar para a agenda geral (o DNS da internet, aula <a href="como-dns-funciona.html">DNS a fundo</a>), você olha os <strong>rabiscos da sua própria agenda</strong>. O arquivo <code>/etc/hosts</code> faz exatamente isso no computador: ele mapeia <strong>nome → IP</strong> localmente, e essa tabela tem <strong>prioridade</strong> sobre o DNS.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O formato do arquivo: <code>IP   nome   apelido-opcional</code>, um por linha.</li>
+  <li>A ver o arquivo da máquina da Ana: <code>cat /etc/hosts</code>.</li>
+  <li>Que o <code>ping roteador</code> funciona por causa do hosts — e não do DNS.</li>
+  <li>Para que serve: testar sites locais, dar apelidos à rede, bloquear sites.</li>
+  <li>Os cuidados: precisa de administrador e vale só na sua máquina.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O arquivo na máquina da Ana</h2>
+<pre class="term">$ cat /etc/hosts
+127.0.0.1   localhost
+127.0.1.1   notebook
+192.168.1.50 notebook
+192.168.1.1  roteador gateway</pre>
+<pre class="file"># formato de cada linha:
+# IP          nome-principal   apelido-opcional
+192.168.1.1  roteador         gateway</pre>
+<dl class="anatomy">
+  <dt>192.168.1.1</dt><dd>O <strong>IP</strong> para o qual o nome vai apontar.</dd>
+  <dt>roteador</dt><dd>O <strong>nome principal</strong> — é como você vai chamar essa máquina.</dd>
+  <dt>gateway</dt><dd>Um <strong>apelido</strong> (alias) — também funciona, na mesma linha.</dd>
+</dl>
+<p>Regras: um registro por linha; comentários começam com <code>#</code>; o primeiro nome depois do IP é o principal, os demais são apelidos.</p>
+
+<div class="try" data-goal="roteador" data-solucao="cat /etc/hosts">
+<p class="try-task"><strong>Missão:</strong> abra o "DNS local" da máquina da Ana e ache o apelido do roteador: <code>cat /etc/hosts</code></p>
+</div>
+
+<hr>
+
+<h2>Funciona na hora: o hosts passa na frente do DNS</h2>
+<p>Repare na diferença entre as duas linhas abaixo — mesma sintaxe de <code>ping</code>, mas a <strong>resposta veio de lugares diferentes</strong>:</p>
+<pre class="term">$ ping roteador
+PING roteador (192.168.1.1) 56(84) bytes of data.
+64 bytes from 192.168.1.1: icmp_seq=1 ttl=64 time=1.32 ms
+64 bytes from 192.168.1.1: icmp_seq=2 ttl=64 time=1.28 ms
+
+--- roteador ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss
+$ ping meusite.local
+PING meusite.local (192.168.1.60) 56(84) bytes of data.
+64 bytes from 192.168.1.60: icmp_seq=1 ttl=64 time=2.10 ms</pre>
+<ul>
+  <li><code>roteador</code> → <code>192.168.1.1</code> veio do <strong>/etc/hosts</strong> (a linha que vimos acima).</li>
+  <li><code>meusite.local</code> → <code>192.168.1.60</code> veio do <strong>DNS</strong> (não está no hosts).</li>
+</ul>
+<p>A ordem é sempre: <strong>primeiro o /etc/hosts, depois o DNS</strong>. Se um nome existe nos dois, vale o do hosts.</p>
+
+<div class="try" data-goal="64 bytes from 192.168.1.1" data-solucao="ping roteador">
+<p class="try-task"><strong>Missão:</strong> prove que o hosts funciona: pingue o apelido do roteador: <code>ping roteador</code> — o IP 192.168.1.1 veio do <code>/etc/hosts</code></p>
+</div>
+
+<div class="try" data-goal="192.168.1.60" data-solucao="ping meusite.local">
+<p class="try-task"><strong>Missão:</strong> agora um nome que <em>não</em> está no hosts e vem do DNS: <code>ping meusite.local</code></p>
+</div>
+
+<hr>
+
+<h2>Para que serve na prática</h2>
+<ul>
+  <li><strong>Testar um site antes de publicar</strong>: aponte o domínio real para <code>127.0.0.1</code> (sua máquina) ou para o IP do servidor de teste — só no seu computador.</li>
+  <li><strong>Dar apelidos às máquinas da rede local</strong>: <code>roteador</code>, <code>impressora</code>, <code>nas</code>… sem depender do DNS.</li>
+  <li><strong>Bloquear um site</strong>: aponte o domínio para <code>127.0.0.1</code> e ele "não abre" (na prática, para controle de verdade usa-se DNS filtrado ou firewall).</li>
+</ul>
+
+<div class="warning">
+<strong>Cuidados:</strong> editar o <code>/etc/hosts</code> exige <strong>administrador</strong> (<code>sudo</code>) e vale <strong>só na sua máquina</strong> — não adianta editar no notebook achando que vai "consertar" o celular. E se você apontar um site real para outro IP, ele "quebra" <em>só para você</em>: remova a linha depois do teste.
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">De onde veio o IP quando a Ana rodou <code>ping roteador</code>?</p>
+<label><input type="radio" name="q1"> Do arquivo <code>/etc/hosts</code> (que tem prioridade sobre o DNS)</label>
+<label><input type="radio" name="q1"> Do servidor DNS 8.8.8.8</label>
+<label><input type="radio" name="q1"> Do roteador, por DHCP</label>
+<label><input type="radio" name="q1"> Foi chutado pelo comando ping</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>/etc/hosts</code> mapeia <code>IP nome apelido…</code> localmente e é consultado <strong>antes</strong> do DNS.</li>
+  <li>Na máquina da Ana: <code>192.168.1.1 roteador gateway</code> — por isso <code>ping roteador</code> responde 192.168.1.1.</li>
+  <li>Usos: testar sites locais, apelidos na rede, bloquear sites. Exige admin e vale só no computador local.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="propagacao-dns.html">TTL e propagação de DNS</a> — por que a mudança de um registro DNS demora para valer no mundo inteiro.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

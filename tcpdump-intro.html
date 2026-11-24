@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tcpdump: capturar e ler pacotes na placa de rede (filtros host, port) | Guia Redes</title>
+<meta name="description" content="O tcpdump coloca a placa de rede em modo promíscuo e imprime cada pacote que passa por ela — como um grampo na linha (com permissão). Sintaxe tcpdump -i eth0 com filtros BPF (host exemplo.com, port 443, tcp, udp, icmp, combinações com and/or), anatomia de uma linha capturada (hora, IP origem.porta > destino.porta, Flags, seq, win, length), como parar com Ctrl+C e gravar em .pcap com -w para abrir no Wireshark. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>tcpdump: <span class="hl">capturar pacotes</span> no terminal</h1>
+
+<p class="intro">Até agora vimos comandos que <em>fazem</em> algo na rede (ping, curl, dig). O <code>tcpdump</code> faz o contrário: ele <strong>escuta</strong>. Ele coloca a placa de rede em <strong>modo promíscuo</strong> — que passa a receber <em>todos</em> os pacotes que passam pelo cabo, não só os endereçados a ela — e imprime cada um na tela. Pense nele como um grampo na linha telefônica (só em linhas suas, com permissão!): você ouve tudo que entra e sai da máquina.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A sintaxe: <code>tcpdump -i eth0 [filtro]</code> — e que no início aparece <code>tcpdump: listening on eth0…</code>.</li>
+  <li>Os filtros BPF: <code>host</code>, <code>port</code>, <code>tcp</code>, <code>udp</code>, <code>icmp</code>, com <code>and</code>/<code>or</code>.</li>
+  <li>A anatomia de uma linha capturada: hora, origem.porta &gt; destino.porta, flags, seq, length.</li>
+  <li>Parar com <kbd>Ctrl</kbd>+<kbd>C</kbd> e gravar em arquivo <code>.pcap</code> com <code>-w</code> (para abrir no Wireshark).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Capturando tudo na eth0</h2>
+<pre class="term">$ tcpdump -i eth0
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:15:01.100001 IP 192.168.1.50.54321 > 93.184.216.34.80: Flags [S], seq 1548213, win 64240, length 0
+10:15:01.123456 IP 93.184.216.34.80 > 192.168.1.50.54321: Flags [S.], seq 9921045, ack 1548214, win 65535, length 0
+10:15:01.123500 IP 192.168.1.50.54321 > 93.184.216.34.80: Flags [.], ack 9921046, win 64240, length 0
+10:15:01.201010 IP 192.168.1.50.51234 > 192.168.1.1.53: 12345+ A? exemplo.com. (29)
+10:15:01.230044 IP 192.168.1.1.53 > 192.168.1.50.51234: 12345 1/0/0 A 93.184.216.34 (45)</pre>
+<p>Repare que dá para ver a vida toda da máquina: o handshake TCP (<code>Flags [S]</code>, <code>[S.]</code>, <code>[.]</code> — aula <a href="handshake-tcp.html">handshake</a>) e até a consulta DNS em UDP porta 53.</p>
+
+<h3>Anatomia de uma linha de pacote</h3>
+<dl class="anatomy">
+  <dt>10:15:01.100001</dt><dd>Hora exata da captura (com microssegundos).</dd>
+  <dt>IP</dt><dd>O protocolo da camada de rede (IPv4).</dd>
+  <dt>192.168.1.50.54321 &gt; 93.184.216.34.80</dt><dd>Origem <code>IP.porta</code> &gt; destino <code>IP.porta</code> — o socket de cada lado da conversa.</dd>
+  <dt>Flags [S]</dt><dd>Flags do TCP (SYN, ACK, FIN… — tabela na aula de <a href="handshake-tcp.html">handshake</a>).</dd>
+  <dt>seq 1548213, ack…, win 64240</dt><dd>Número de sequência, confirmação e tamanho da janela de recepción.</dd>
+  <dt>length 0</dt><dd>Tamanho dos dados úteis do pacote (0 = pacote de controle, só flags).</dd>
+</dl>
+
+<hr>
+
+<h2>Filtrando: só o que interessa (BPF)</h2>
+<p>Capturar tudo gera muito barulho. Os filtros (BPF) selecionam na hora:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Filtro</th><th>Mostra só pacotes…</th><th>Exemplo</th></tr>
+<tr><td><code>host exemplo.com</code></td><td>de ou para aquele host/IP</td><td><code>tcpdump -i eth0 host exemplo.com</code></td></tr>
+<tr><td><code>port 443</code></td><td>com origem ou destino na porta 443</td><td><code>tcpdump -i eth0 port 443</code></td></tr>
+<tr><td><code>tcp</code> / <code>udp</code> / <code>icmp</code></td><td>do protocolo de transporte/rede indicado</td><td><code>tcpdump -i eth0 udp port 53</code> (só DNS)</td></tr>
+<tr><td><code>src 192.168.1.50</code></td><td> só de origem neste IP</td><td><code>tcpdump -i eth0 src 192.168.1.50</code></td></tr>
+<tr><td>combinados</td><td><code>and</code>, <code>or</code>, <code>not</code></td><td><code>tcpdump -i eth0 host exemplo.com and port 443</code></td></tr>
+</table>
+</div>
+<pre class="term">$ tcpdump -i eth0 host exemplo.com and port 443
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:20:11.500001 IP 192.168.1.50.55001 > 93.184.216.34.443: Flags [S], seq 2233001, win 64240, length 0
+…</pre>
+
+<div class="try" data-goal="tcpdump: listening" data-solucao="tcpdump -i eth0">
+<p class="try-task"><strong>Missão:</strong> rode <code>tcpdump -i eth0</code> e veja a linha <code>tcpdump: listening on eth0…</code> — a placa entrou em modo promíscuo e está capturando. (No simulador, <kbd>Ctrl</kbd>+<kbd>C</kbd> limpa a tela como no terminal real.)</p>
+</div>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="tcpdump host exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>tcpdump host exemplo.com</code> — o filtro mostra só pacotes de/para o exemplo.com, e as linhas de pacote exibem o IP <code>93.184.216.34</code> do servidor.</p>
+</div>
+
+<div class="warning">
+<strong>Cuidados com o tcpdump</strong>
+<ul>
+  <li>Normalmente precisa de <strong>root</strong> (<code>sudo tcpdump …</code>) para modo promíscuo.</li>
+  <li>Pare com <kbd>Ctrl</kbd>+<kbd>C</kbd>; no fim ele imprime um resumo ("N packets captured, N received by filter, N dropped by kernel").</li>
+  <li>Em produção, a captura pode conter <strong>dados sensíveis</strong> (senhas trafegam criptografadas em HTTPS, mas nem tudo é criptografado) — capture só o necessário e apague depois.</li>
+  <li>Para analisar depois (ou no Wireshark), grave em arquivo: <code>tcpdump -i eth0 -w captura.pcap</code> — o <code>.pcap</code> é o formato padrão de captura.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>tcpdump -i eth0</code> captura tudo que passa na placa (modo promíscuo) e imprime <code>tcpdump: listening on eth0…</code>.</li>
+  <li>Filtros BPF: <code>host</code>, <code>port</code>, <code>src</code>, <code>tcp</code>/<code>udp</code>/<code>icmp</code>, combinados com <code>and</code>/<code>or</code>.</li>
+  <li>Cada linha mostra hora, <code>origem.porta &gt; destino.porta</code>, flags, seq e length.</li>
+  <li><kbd>Ctrl</kbd>+<kbd>C</kbd> para parar; <code>-w arquivo.pcap</code> grava para abrir no Wireshark.</li>
+</ul>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Qual comando captura só os pacotes da porta 443 na eth0?</p>
+<label><input type="radio" name="q1"> <code>tcpdump port 80</code></label>
+<label><input type="radio" name="q1"> <code>tcpdump -i eth0 host 443</code></label>
+<label><input type="radio" name="q1"> <code>tcpdump -i eth0 port 443</code></label>
+<label><input type="radio" name="q1"> <code>tcpdump -i 443 eth0</code></label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">Na linha <code>IP 192.168.1.50.54321 &gt; 93.184.216.34.80: Flags [S], seq 1548213, length 0</code>, o que é <code>54321</code>?</p>
+<label><input type="radio" name="q2"> A porta de origem (aleatória) da conexão TCP no computador da Ana</label>
+<label><input type="radio" name="q2"> O número de sequência do pacote</label>
+<label><input type="radio" name="q2"> O TTL do pacote</label>
+<label><input type="radio" name="q2"> A máscara de sub-rede</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="wireshark-intro.html">Wireshark: o tcpdump com interface gráfica</a> — como abrir o arquivo .pcap numa janela, filtrar por protocolo, seguir o fluxo TCP inteiro e ler os detalhes de cada camada do pacote.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

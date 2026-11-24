@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encapsulamento: pacote dentro de pacote | Guia Redes</title>
+<meta name="description" content="Encapsulamento explicado com a analogia da carta dentro de envelope dentro de caixa: como os dados da aplicação vão sendo embrulhados pelo TCP (segmento), pelo IP (pacote) e pela Ethernet (quadro) a cada camada descendo, e desembrulhados do outro lado. Veja na prática com tcpdump no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Encapsulamento</span>: pacote dentro de pacote</h1>
+
+<p class="intro">Lembra da carta internacional da aula de <a href="modelo-osi.html">OSI</a>? Cada camada colocava a carta dentro de um novo envelope. Em redes, chamamos isso de <strong>encapsulamento</strong>: os dados vão descendo as camadas e cada uma <strong>embrulha o pacote da camada de cima com o seu próprio cabeçalho</strong> — como uma carta dentro de um envelope, dentro de uma caixa, dentro do caminhão.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é encapsulamento e o que é o <strong>header</strong> (cabeçalho) de cada camada;</li>
+  <li>A ordem dos embrulhos: <strong>dados → segmento TCP → pacote IP → quadro Ethernet</strong>;</li>
+  <li>Quem é o "conteúdo" de cada embrulho (a unidade de dados de cada camada);</li>
+  <li>Como ver esses embrulhos na prática com <code>tcpdump</code>;</li>
+  <li>O processo inverso no destino: <strong>desencapsulamento</strong>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia das bonecas russas</h2>
+<p>Quando a Ana abre <code>https://exemplo.com</code> no navegador, acontece mais ou menos isso:</p>
+
+<pre class="term">dados HTTP          →  "GET / HTTP/2" + resposta HTML
+   ↓ embrulhado pelo TCP
+segmento TCP        →  segmento + cabeçalho TCP (portas 443 → 54321, números de sequência…)
+   ↓ embrulhado pelo IP
+pacote IP           →  pacote + cabeçalho IP (192.168.1.50 → 93.184.216.34, TTL…)
+   ↓ embrulhado pela Ethernet
+quadro Ethernet     →  quadro + cabeçalho Ethernet (MAC aa:bb:cc:dd:ee:ff → MAC do roteador)</pre>
+
+<p>Cada "embrulho" é o <strong>header</strong> (cabeçalho) que a camada adiciona, com as informações que ela precisa: a camada TCP coloca as portas, a camada IP coloca os endereços IP, a Ethernet coloca os endereços MAC. No destino, o processo inverso — <strong>desencapsulamento</strong> — vai tirando um embrulho por vez, de baixo para cima, até sobrar só os dados HTTP.</p>
+
+<hr>
+
+<h2>Anatomia dos embrulhos</h2>
+
+<dl class="anatomy">
+  <dt>Dados (PDU da aplicação)</dt><dd>A mensagem HTTP de verdade: <code>GET / HTTP/2</code> ou o HTML da resposta. Para a aplicação, é tudo o que existe.</dd>
+  <dt>Segmento (camada de transporte)</dt><dd>Dados + <strong>header TCP</strong>: porta de origem, porta de destino (443), número de sequência, flags (SYN/ACK…). É o TCP quem remontou tudo do outro lado, na ordem certa.</dd>
+  <dt>Pacote (camada de internet)</dt><dd>Segmento + <strong>header IP</strong>: IP de origem (<code>192.168.1.50</code>), IP de destino (<code>93.184.216.34</code>), TTL (time-to-live, o "prazo de validade" do pacote), protocolo (6 = TCP). É o IP quem roteia.</dd>
+  <dt>Quadro / frame (camada de acesso à rede)</dt><dd>Pacote + <strong>header Ethernet</strong>: MAC de origem (<code>aa:bb:cc:dd:ee:ff</code>) e MAC de destino (do gateway <code>192.168.1.1</code>), além do trailer com a verificação de erro (FCS). É a placa de rede quem entrega no trecho local.</dd>
+</dl>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Camada</th><th>Unidade de dados (PDU)</th><th>O que o header leva</th></tr>
+<tr><td>Aplicação</td><td>Dados</td><td>O próprio protocolo: linhas HTTP, registros DNS…</td></tr>
+<tr><td>Transporte</td><td>Segmento</td><td>Portas origem/destino, sequência, flags TCP (ou só portas, no UDP)</td></tr>
+<tr><td>Internet</td><td>Pacote</td><td>IPs origem/destino, TTL, protocolo encapsulado</td></tr>
+<tr><td>Acesso à rede</td><td>Quadro (frame)</td><td>MACs origem/destino, tipo do protocolo (0x0800 = IP), FCS (erro)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Vendo os embrulhos com tcpdump</h2>
+<p>O <code>tcpdump</code> captura os quadros que passam pela placa de rede — ou seja, você vê o <strong>pacote IP dentro do quadro Ethernet</strong>. No simulador, a saída mostra o IP de origem, o de destino e a porta (que está dentro do segmento TCP dentro do pacote IP):</p>
+
+<div class="try" data-goal="listening on eth0" data-solucao="tcpdump -i eth0">
+<p class="try-task"><strong>Missão:</strong> rode <code>tcpdump -i eth0</code> para "fotografar" os pacotes passando pela placa de rede da Ana e ver o encapsulamento na prática. Depois rode <code>ping exemplo.com</code> em outra caixa para gerar tráfego.</p>
+</div>
+
+<pre class="term">$ tcpdump -i eth0
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+14:03:01.123456 IP 192.168.1.50.54321 &gt; 93.184.216.34.443: Flags [S], seq 1234567, win 64240, length 0
+14:03:01.145678 IP 93.184.216.34.443 &gt; 192.168.1.50.54321: Flags [S.], seq 7654321, ack 1234568, win 64240, length 0</pre>
+
+<p>Na linha acima: <code>192.168.1.50.54321 &gt; 93.184.216.34.443</code> — o <strong>IP</strong> (camada internet) e as <strong>portas</strong> (camada transporte, dentro do segmento TCP) aparecem juntos, porque o tcpdump lê o quadro e mostra o que está encapsulado dentro dele. A aula <a href="tcpdump-intro.html">tcpdump</a> aprofunda os filtros.</p>
+
+<div class="warning">
+<strong>TTL: o prazo de validade do pacote</strong>
+<p>Todo pacote IP nasce com um TTL (ex.: 64). Cada roteador que passa desconta 1; se chegar a 0, o pacote é descartado e o roteador avisa com ICMP "Time Exceeded". Isso evita que pacotes fiquem circulando para sempre num loop de rotas — e é exatamente o truque que o <code>traceroute</code> usa (aula <a href="icmp.html">ICMP</a>).</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Encapsulamento = cada camada embrulha os dados da camada de cima com seu próprio <strong>header</strong>, descendo; no destino, desembrulha subindo.</li>
+  <li>A ordem: <strong>dados → segmento TCP → pacote IP → quadro Ethernet</strong> (cada um dentro do anterior).</li>
+  <li>Header TCP = portas; header IP = IPs + TTL; header Ethernet = MACs. Cada camada só lê o seu embrulho.</li>
+  <li>O <code>tcpdump</code> mostra o pacote IP dentro do quadro Ethernet — o encapsulamento visível.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="icmp.html">ICMP: o protocolo por trás do ping e do traceroute</a> — um protocolo da camada internet que não leva dados de usuário, só controle e erro.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

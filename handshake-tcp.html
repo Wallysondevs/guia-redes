@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handshake TCP de 3 vias: SYN, SYN-ACK, ACK | Guia Redes</title>
+<meta name="description" content="Antes de trocar qualquer dado, o TCP abre a conexão com o handshake de 3 vias: o cliente manda SYN (seq=x), o servidor responde SYN-ACK (seq=y, ack=x+1) e o cliente confirma com ACK (ack=y+1). O que são os números de sequência, as flags do TCP (S, ., P, F, R) vistas no tcpdump (Flags [S], [S.], [.]) e como acontece o encerramento com FIN. Erros reais: timeout (porta filtrada) e RST (porta fechada). Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O handshake de 3 vias: <span class="hl">SYN → SYN-ACK → ACK</span></h1>
+
+<p class="intro">Antes de mandar qualquer dado, o TCP precisa "ligar o telefone" dos dois lados e combinar os números de série da conversa. A analogia do telefonema: <em>"Alô? Pode falar?"</em> — <em>"Alô, pode sim, e você está me ouvindo?"</em> — <em>"Perfeito, então vamos lá"</em>. Essas são as <strong>3 mensagens do handshake</strong>: SYN, SYN-ACK e ACK. Só depois delas a conexão vira <code>ESTABLISHED</code> e os dados podem trafegar.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>As 3 etapas do handshake: <strong>SYN</strong> (seq=x), <strong>SYN-ACK</strong> (seq=y, ack=x+1), <strong>ACK</strong> (ack=y+1).</li>
+  <li>Para que servem os números de <strong>sequência (seq/ack)</strong>: ordenar e confirmar cada byte.</li>
+  <li>As <strong>flags</strong> do TCP vistas no tcpdump: <code>[S]</code>, <code>[S.]</code>, <code>[.]</code>, <code>[P.]</code>, <code>[F]</code>, <code>[R]</code>.</li>
+  <li>Como o tcpdump mostra o handshake na prática.</li>
+  <li>Erros reais: SYN sem resposta (timeout) e resposta RST (porta fechada).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>As 3 mensagens, byte a byte</h2>
+<p>O notebook da Ana (<code>192.168.1.50</code>) abre uma conexão TCP com o servidor do exemplo.com (<code>93.184.216.34</code>, porta 80):</p>
+<dl class="anatomy">
+  <dt>1. SYN (cliente → servidor)</dt><dd><code>192.168.1.50:54321 → 93.184.216.34:80 Flags [S], seq=x</code>. "Quero abrir uma conexão; meu primeiro número de sequência é x."</dd>
+  <dt>2. SYN-ACK (servidor → cliente)</dt><dd><code>93.184.216.34:80 → 192.168.1.50:54321 Flags [S.], seq=y, ack=x+1</code>. "Pode falar (meu seq é y), e confirme que recebeu até x+1."</dd>
+  <dt>3. ACK (cliente → servidor)</dt><dd><code>192.168.1.50:54321 → 93.184.216.34:80 Flags [.], ack=y+1</code>. "Confirmado, recebido até y+1."</dd>
+</dl>
+<p>Pronto: a conexão está <strong>ESTABLISHED</strong> nos dois lados. A partir daí, cada byte enviado vem com um número de sequência e o outro lado responde <code>ack</code> confirmando até onde recebeu — é assim que o TCP garante ordem e nada perdido (aula <a href="tcp-vs-udp.html">TCP vs UDP</a>).</p>
+
+<hr>
+
+<h2>Vendo o handshake no tcpdump</h2>
+<p>O <code>tcpdump</code> (próxima aula, <a href="tcpdump-intro.html">tcpdump</a>) mostra as flags de cada pacote TCP. O início de uma conexão aparece exatamente assim — um <code>[S]</code>, um <code>[S.]</code> e um <code>[.]</code>:</p>
+<pre class="term">$ tcpdump -i eth0 port 80
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:15:01.100001 IP 192.168.1.50.54321 > 93.184.216.34.80: Flags [S], seq 1548213, win 64240, length 0
+10:15:01.123456 IP 93.184.216.34.80 > 192.168.1.50.54321: Flags [S.], seq 9921045, ack 1548214, win 65535, length 0
+10:15:01.123500 IP 192.168.1.50.54321 > 93.184.216.34.80: Flags [.], ack 9921046, win 64240, length 0
+10:15:01.123600 IP 192.168.1.50.54321 > 93.184.216.34.80: Flags [P.], seq 1548214, ack 9921046, length 78   « pedido HTTP</pre>
+
+<h3>Tabela de flags do TCP</h3>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Flag</th><th>Nome</th><th>Quando aparece</th></tr>
+<tr><td><code>[S]</code></td><td>SYN</td><td>Abertura de conexão (1ª mensagem)</td></tr>
+<tr><td><code>[S.]</code></td><td>SYN + ACK</td><td>Resposta do servidor (2ª mensagem)</td></tr>
+<tr><td><code>[.]</code></td><td>ACK</td><td>Confirmação pura (3ª mensagem e todas as seguintes)</td></tr>
+<tr><td><code>[P.]</code></td><td>PSH + ACK</td><td>"Empurre os dados para a aplicação agora" (ex.: pedido HTTP)</td></tr>
+<tr><td><code>[F.]</code></td><td>FIN + ACK</td><td>Encerramento ordeiro da conexão ("não vou mandar mais nada")</td></tr>
+<tr><td><code>[R]</code></td><td>RST</td><td>Reset — conexão recusada/abortada na hora</td></tr>
+</table>
+</div>
+
+<div class="try" data-goal="tcpdump: listening" data-solucao="tcpdump -i eth0">
+<p class="try-task"><strong>Missão:</strong> rode <code>tcpdump -i eth0</code> no terminal e veja as linhas de captura com <code>Flags [S]</code> — cada pacote SYN que o notebook manda para abrir uma conexão TCP.</p>
+</div>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://exemplo.com</code> — por baixo, esse comando acabou de fazer um handshake SYN/SYN-ACK/ACK com o servidor na porta 443 antes de mandar o pedido.</p>
+</div>
+
+<div class="warning">
+<strong>Erros reais que o handshake revela</strong>
+<ul>
+  <li><strong>SYN sem resposta (timeout):</strong> ninguém respondeu — firewall filtrando ou host desligado. No curl aparece <code>Connection timed out</code>.</li>
+  <li><strong>Resposta RST:</strong> a porta está fechada no servidor (não tem programa escutando nela). No curl aparece <code>Connection refused</code> — é a máquina dizendo "aqui não mora ninguém nessa porta".</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>E o fim da conversa?</h2>
+<p>Para encerrar, cada lado manda um <strong>FIN</strong> e recebe um ACK (geralmente 4 pacotes, ou 3 se junto). No tcpdump, o fim aparece como <code>Flags [F.]</code> dos dois lados. Se algo dá errado, um lado manda <code>[R]</code> (RST) e a conexão morre na hora.</p>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Handshake de 3 vias: <strong>SYN → SYN-ACK → ACK</strong>, que sincroniza os números de sequência (seq/ack) dos dois lados.</li>
+  <li>Só depois do 3º pacote a conexão está ESTABLISHED e os dados podem trafegar.</li>
+  <li>No tcpdump: <code>[S]</code>, <code>[S.]</code>, <code>[.]</code> = início; <code>[P.]</code> = dados; <code>[F.]</code> = fim; <code>[R]</code> = reset.</li>
+  <li>SYN sem resposta = timeout (filtrado); RST = porta fechada (recusada).</li>
+</ul>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Quais são as 3 mensagens do handshake TCP, na ordem?</p>
+<label><input type="radio" name="q1"> ACK → SYN → SYN-ACK</label>
+<label><input type="radio" name="q1"> SYN → SYN-ACK → ACK</label>
+<label><input type="radio" name="q1"> SYN → ACK → SYN-ACK</label>
+<label><input type="radio" name="q1"> FIN → SYN → ACK</label>
+</div>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">No tcpdump, você vê <code>Flags [S]</code> saindo do seu computador. O que isso significa?</p>
+<label><input type="radio" name="q2"> Um pacote de dados HTTP</label>
+<label><input type="radio" name="q2"> O fim da conexão (FIN)</label>
+<label><input type="radio" name="q2"> Uma retransmissão</label>
+<label><input type="radio" name="q2"> O início de uma conexão TCP (SYN) — o "alô, pode falar?"</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="tcpdump-intro.html">tcpdump: capturar pacotes na interface</a> — a lupa que usamos para ver esse handshake: como capturar pacotes com filtros (host, port) e ler cada linha.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

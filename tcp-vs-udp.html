@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TCP vs UDP: ligação telefônica com recibo vs rádio | Guia Redes</title>
+<meta name="description" content="TCP e UDP são os dois protocolos de transporte: TCP é como uma ligação telefônica (conexão, ordem, confirmação ACK e retransmissão — usado por HTTP/HTTPS na porta 80/443 e SSH na 22), UDP é como um rádio (rápido, sem confirmação, sem ordem — usado por DNS na 53, DHCP nas 67/68, vídeo ao vivo e jogos). Tabela comparativa, o que é porta/socket e como ver conexões TCP abertas com ss -tlnp. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>TCP vs UDP: <span class="hl">recibo</span> vs rapidez</h1>
+
+<p class="intro">Depois que o pacote IP chega ao destino, ainda falta entregar os dados ao <strong>programa certo</strong> — e fazer isso direito. Essa é a camada de <strong>transporte</strong>, com dois protocolos rivais. A analogia: <strong>TCP é uma ligação telefônica</strong> — você confirma que está ouvindo ("alô? tá me ouvindo?"), fala pausado e, se a linha chia, repete o pedaço. <strong>UDP é um rádio ou um alto-falante no corredor</strong> — você joga a mensagem no ar, rápido, e não sabe se alguém recebeu.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>TCP: com conexão, ordenado, com confirmação (ACK) e retransmissão. Ex.: web (80/443), SSH (22).</li>
+  <li>UDP: sem conexão, sem garantia, leve e rápido. Ex.: DNS (53), DHCP (67/68), vídeo/VoIP, jogos.</li>
+  <li>O que é <strong>porta</strong>: o par <code>IP:porta</code> (socket) identifica cada conversa.</li>
+  <li>Como ver as portas TCP em escuta com <code>ss -tlnp</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>TCP: a ligação telefônica com recibo</h2>
+<p>O <strong>TCP</strong> (Transmission Control Protocol) abre uma <strong>conexão</strong> antes de mandar dados (o handshake da <a href="handshake-tcp.html">próxima aula</a>), numera cada byte enviado, exige <strong>confirmação (ACK)</strong> de cada pacote e <strong>retransmite</strong> o que se perdeu. Os dados chegam <strong>na ordem</strong>. É mais lento e mais "pesado", mas você tem certeza de que chegou tudo inteiro — ideal para páginas web, e-mail, arquivos.</p>
+
+<h2>UDP: o rádio</h2>
+<p>O <strong>UDP</strong> (User Datagram Protocol) manda cada mensagem (datagrama) e <strong>esquece</strong>: sem conexão, sem ordem, sem confirmação, sem retransmissão. É leve e rapidíssimo — ideal quando a velocidade importa mais que a garantia, ou quando o próprio programa cuida da confirmação: <strong>DNS</strong> (porta 53), <strong>DHCP</strong> (67/68), vídeo ao vivo e chamadas de voz (pode perder um quadrinho, não pode travar), jogos online, NTP (relógio, porta 123).</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>TCP</th><th>UDP</th></tr>
+<tr><td>Conexão antes?</td><td>Sim (handshake de 3 vias)</td><td>Não — manda direto</td></tr>
+<tr><td>Ordem dos dados</td><td>Garantida</td><td>Não garantida</td></tr>
+<tr><td>Confirmação (ACK)</td><td>Sim, pacote a pacote</td><td>Não</td></tr>
+<tr><td>Retransmissão de perdidos</td><td>Sim</td><td>Não (o app cuida, se quiser)</td></tr>
+<tr><td>Velocidade / peso</td><td>Mais lento, mais cabeçalho (20 bytes)</td><td>Rápido, leve (8 bytes)</td></tr>
+<tr><td>Exemplos (portas)</td><td>HTTP 80, HTTPS 443, SSH 22, e-mail 25/587</td><td>DNS 53, DHCP 67/68, VoIP, vídeo ao vivo, jogos, NTP 123</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Portas: o número da sala dentro do IP</h2>
+<p>Um computador pode ter várias conversas ao mesmo tempo, então cada uma ganha um número de <strong>porta</strong> (0–65535). O par <code>IP:porta</code> chama-se <strong>socket</strong> e identifica a conversa — como o ramal dentro do prédio: o prédio é o IP, a sala é a porta. Portas de 0 a 1023 são as <strong>bem-conhecidas</strong> (reservadas a serviços padrão: 80 = web, 443 = web segura, 22 = SSH, 53 = DNS).</p>
+
+<hr>
+
+<h2>Na prática, na máquina da Ana</h2>
+<p>O comando <code>ss -tlnp</code> lista as portas <strong>TCP</strong> em escuta (esperando conexão) no notebook — repare que é TCP (Netid = TCP):</p>
+<pre class="term">$ ss -tlnp
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22           0.0.0.0:*     users:(("sshd",1234))
+TCP   LISTEN 0      128    0.0.0.0:8000         0.0.0.0:*     users:(("python3",2345))</pre>
+<p>Já o <code>dig</code> usa <strong>UDP</strong> porta 53 para perguntar ao DNS — mesmo sem "abrir conexão":</p>
+<pre class="term">$ dig exemplo.com +short
+93.184.216.34</pre>
+<p>E o <code>curl</code> usa <strong>TCP</strong> (porta 80 ou 443) para falar HTTP com o servidor:</p>
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+…</pre>
+
+<div class="try" data-goal="LISTEN" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> e veja as portas TCP em <code>LISTEN</code> no notebook da Ana (22 do SSH e 8000 de um servidor local).</p>
+</div>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig exemplo.com +short</code> — essa consulta foi feita em <strong>UDP</strong> porta 53, sem conexão e sem recibo.</p>
+</div>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i http://exemplo.com</code> — essa conversa foi em <strong>TCP</strong> porta 80, com conexão, ordem e confirmação.</p>
+</div>
+
+<div class="warning">
+<strong>"UDP não chegou" é difícil de diagnosticar</strong>
+<p>Como o UDP não confirma nada, se um pacote se perder no caminho ninguém avisa — o programa simplesmente não recebe. Por isso aplicações UDP (vídeo, jogos, DNS) ou toleram perda ou implementam a própria confirmação. Já no TCP, se algo se perde, o remetente retransmite sozinho e você nem percebe.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>TCP = telefonema: conexão, ordem, ACK e retransmissão (web 80/443, SSH 22). UDP = rádio: rápido, sem garantia (DNS 53, DHCP 67/68, vídeo, jogos).</li>
+  <li>Porta = número da conversa dentro do IP; o par IP:porta é o socket.</li>
+  <li>Veja portas TCP em escuta com <code>ss -tlnp</code> (aparece <code>LISTEN</code>).</li>
+  <li>Escolha: precisa de garantia (arquivo, página) → TCP; precisa de velocidade (vídeo, jogo, consulta rápida) → UDP.</li>
+</ul>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Uma consulta DNS (dig) usa qual protocolo de transporte e porta?</p>
+<label><input type="radio" name="q1"> TCP porta 80</label>
+<label><input type="radio" name="q1"> UDP porta 53 (na maioria das vezes)</label>
+<label><input type="radio" name="q1"> ICMP porta 0</label>
+<label><input type="radio" name="q1"> HTTP porta 443</label>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Você baixa um arquivo grande e não pode perder nenhum byte. Qual protocolo garante isso?</p>
+<label><input type="radio" name="q2"> UDP, porque é mais rápido</label>
+<label><input type="radio" name="q2"> ICMP</label>
+<label><input type="radio" name="q2"> TCP, com confirmação (ACK) e retransmissão</label>
+<label><input type="radio" name="q2"> ARP</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="handshake-tcp.html">Handshake TCP: SYN, SYN-ACK, ACK</a> — vamos abrir a "ligação telefônica" do TCP e ver as 3 mensagens que abrem a conexão antes de qualquer dado trafegar.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

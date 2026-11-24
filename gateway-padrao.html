@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gateway padrão: a porta de saída da sua rede local (tabela de rotas) | Guia Redes</title>
+<meta name="description" content="O gateway padrão é o endereço para onde o computador manda todo pacote cujo destino está fora da rede local — a 'portaria do prédio'. Como ler a tabela de rotas com ip route e route -n (default via 192.168.1.1, a rota da rede local 192.168.1.0/24) e a anatomia da linha 'default via … dev eth0 proto dhcp'. O que acontece sem gateway. Missões no simulador com ip route e ping.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Gateway padrão: a <span class="hl">porta de saída</span> da rede</h1>
+
+<p class="intro">Pense no seu prédio: dentro dele, você fala <strong>direto</strong> com o vizinho do apartamento 50 — só precisa saber o número do apto. Mas para entregar uma carta a <em>qualquer outro lugar do mundo</em>, você precisa passar pela <strong>portaria</strong>. O <strong>gateway padrão</strong> é a portaria da sua rede: todo pacote cujo destino está <strong>fora da sua sub-rede</strong> é entregue a ele, e ele sabe continuar o caminho.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Como a tabela de rotas decide: destino na rede local → entrega direta; resto → gateway padrão.</li>
+  <li>A ler <code>ip route</code> e <code>route -n</code>: a linha <code>default via 192.168.1.1</code>.</li>
+  <li>A anatomia da rota padrão: <code>default via GATEWAY dev IFACE proto dhcp</code>.</li>
+  <li>O que acontece quando não existe gateway padrão.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A tabela de rotas na prática</h2>
+<p>Todo computador tem uma <strong>tabela de rotas</strong> — uma lista de regras "para este destino, faça assim". Na máquina da Ana há duas regras:</p>
+<pre class="term">$ ip route
+default via 192.168.1.1 dev eth0 proto dhcp metric 100
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.50 metric 100</pre>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Rota</th><th>Significado</th><th>Exemplo de destino</th></tr>
+<tr><td><code>192.168.1.0/24 dev eth0 … src 192.168.1.50</code></td><td>Destino <strong>dentro</strong> da rede local → entrega <strong>direta</strong> pela placa eth0 (via ARP, aula <a href="arp.html">ARP</a>)</td><td><code>ping 192.168.1.1</code>, <code>ping 192.168.1.60</code></td></tr>
+<tr><td><code>default via 192.168.1.1 dev eth0</code></td><td><strong>Todo o resto</strong> (a rota "padrão") → manda para o gateway 192.168.1.1</td><td><code>ping 8.8.8.8</code>, <code>exemplo.com</code>, qualquer site</td></tr>
+</table>
+</div>
+
+<h3>Anatomia da linha de rota padrão</h3>
+<dl class="anatomy">
+  <dt>default</dt><dd>Apelido para <code>0.0.0.0/0</code> — "qualquer destino que não casou com outra rota mais específica".</dd>
+  <dt>via 192.168.1.1</dt><dd>O endereço do <strong>gateway padrão</strong> (o roteador): para onde o pacote é encaminhado.</dd>
+  <dt>dev eth0</dt><dd>A placa de rede por onde o pacote sai.</dd>
+  <dt>proto dhcp</dt><dd>Quem configurou essa rota: o <a href="dhcp.html">DHCP</a> entregou esse gateway automaticamente.</dd>
+  <dt>metric 100</dt><dd>Prioridade da rota (quando há várias, vale a de menor métrica).</dd>
+</dl>
+
+<p>O formato antigo, com <code>route -n</code>, mostra a mesma coisa com máscara:</p>
+<pre class="term">$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+default         192.168.1.1     0.0.0.0         UG    100    0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     100    0        0 eth0</pre>
+<p>Na linha da rede local, <code>Gateway 0.0.0.0</code> significa "entrega direta, sem gateway". Na linha default, <code>Gateway 192.168.1.1</code> com flag <code>UG</code> (Up + Gateway) é a porta de saída.</p>
+
+<div class="try" data-goal="default via 192.168.1.1" data-solucao="ip route">
+<p class="try-task"><strong>Missão:</strong> rode <code>ip route</code> e ache a linha <code>default via 192.168.1.1</code> — essa é a porta de saída da rede da Ana.</p>
+</div>
+
+<div class="try" data-goal="64 bytes from 8.8.8.8" data-solucao="ping 8.8.8.8">
+<p class="try-task"><strong>Missão:</strong> rode <code>ping 8.8.8.8</code>. O 8.8.8.8 está <em>fora</em> da rede local, então o pacote foi entregue ao gateway 192.168.1.1 (e voltou a resposta).</p>
+</div>
+
+<div class="try" data-goal="64 bytes from 192.168.1.1" data-solucao="ping 192.168.1.1">
+<p class="try-task"><strong>Missão:</strong> agora rode <code>ping 192.168.1.1</code> — destino <em>dentro</em> da rede local: esse pacote foi direto, <strong>sem passar pelo gateway</strong>.</p>
+</div>
+
+<div class="warning">
+<strong>Sem gateway padrão, só existe a rede local</strong>
+<p>Se a rota <code>default</code> sumir (erro de DHCP, configuração manual incompleta), o computador continua pingando os vizinhos (192.168.1.x) — mas <code>ping 8.8.8.8</code> e qualquer site falham com "Network is unreachable". É o sintoma clássico: Wi-Fi conectado, internet morta = falta gateway (ou DNS).</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Gateway padrão = para onde vão os pacotes com destino <strong>fora</strong> da sub-rede local (a "portaria").</li>
+  <li>Na rede da Ana: <code>default via 192.168.1.1 dev eth0 proto dhcp</code>.</li>
+  <li>Destino dentro de 192.168.1.0/24 → entrega direta (gateway 0.0.0.0 na tabela).</li>
+  <li>Veja com <code>ip route</code> ou <code>route -n</code>; sem default, só a rede local funciona.</li>
+</ul>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">O notebook da Ana manda um pacote para <code>93.184.216.34</code> (exemplo.com). Para onde vai o pacote primeiro?</p>
+<label><input type="radio" name="q1"> Direto para o servidor do exemplo.com pelo cabo</label>
+<label><input type="radio" name="q1"> Para o DNS 8.8.8.8</label>
+<label><input type="radio" name="q1"> Para o gateway padrão 192.168.1.1 (rota default)</label>
+<label><input type="radio" name="q1"> Para o broadcast 192.168.1.255</label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">Na tabela de rotas, o que significa <code>Gateway 0.0.0.0</code> na linha da rede local?</p>
+<label><input type="radio" name="q2"> Entrega direta ao destino, sem passar por gateway</label>
+<label><input type="radio" name="q2"> A internet está fora do ar</label>
+<label><input type="radio" name="q2"> O gateway é o próprio servidor DNS</label>
+<label><input type="radio" name="q2"> A rota está com problema</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="como-pacotes-viajam.html">Como o pacote viaja: traceroute passo a passo</a> — agora que o pacote sai pelo gateway, vamos seguir todos os saltos dele até o destino com o traceroute.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

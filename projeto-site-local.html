@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto 1 — servir um site local com python3 -m http.server e testar com curl | Guia Redes</title>
+<meta name="description" content="Projeto prático de redes: crie uma pasta com index.html, suba um servidor HTTP local com python3 -m http.server 8000 e acesse com curl localhost:8000 (resposta 200 OK), curl -i para ver os headers e ss -tlnp para ver a porta 8000 em LISTEN. Inclui erro real de porta em uso (Address already in use) e missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto 1 — <span class="hl">site local</span> com http.server + curl</h1>
+
+<p class="intro">Toda vez que você abre um site, algum computador está <strong>servindo arquivos por HTTP</strong> numa porta. Neste projeto a Ana vai fazer isso no próprio notebook: criar uma pasta com um <code>index.html</code>, ligar um servidor HTTP na <strong>porta 8000</strong> e acessar o site com <code>curl</code> — primeiro "de dentro" (<code>localhost</code>), como se fosse um convidado batendo na porta dos fundos.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Que servir um site = <strong>um programa escutando numa porta</strong> (aqui, a 8000) e devolvendo arquivos.</li>
+  <li>O comando <code>python3 -m http.server 8000</code> e por que ele "prende" o terminal.</li>
+  <li>A diferença entre <code>curl localhost:8000</code> (só corpo) e <code>curl -i localhost:8000</code> (headers + corpo, com <code>200 OK</code>).</li>
+  <li>A confirmar a porta aberta com <code>ss -tlnp</code> (procure <code>LISTEN</code> na 8000).</li>
+  <li>O erro real <code>Address already in use</code> quando a porta já está ocupada.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Passo 1 — criar o site</h2>
+<p>Pense numa página web como numa <strong>Cartaz na porta de casa</strong>: o arquivo <code>index.html</code> é o cartaz, e a pasta onde ele mora é a casa. Crie a pasta e o arquivo:</p>
+<pre class="term">$ mkdir ~/meu-site && cd ~/meu-site
+$ cat &gt; index.html << 'EOF'
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;Oi! Sou o site da Ana.&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;
+EOF</pre>
+<pre class="file">~/meu-site/
+└── index.html      « a página que o servidor vai entregar</pre>
+
+<hr>
+
+<h2>Passo 2 — ligar o servidor na porta 8000</h2>
+<p>O comando <code>python3 -m http.server 8000</code> liga um servidor HTTP mínimo que entrega os arquivos da pasta atual na porta 8000. Repare: o terminal <strong>fica preso</strong> (o servidor fica rodando em primeiro plano). Para desligar, <kbd>Ctrl</kbd>+<kbd>C</kbd>; para rodar "soltinho" e liberar o terminal, rode em outra aba ou com <code>&amp;</code> no fim.</p>
+<pre class="term">$ cd ~/meu-site
+$ python3 -m http.server 8000
+Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/) ...</pre>
+<p>Na máquina fictícia do simulador esse servidor <strong>já está no ar</strong> (é o serviço <code>python3 http.server</code> que aparece no <code>ss</code>). Na sua máquina real, ligue você mesmo com o comando acima.</p>
+
+<div class="try" data-goal="LISTEN" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> no terminal e encontre a porta <code>8000</code> em estado <code>LISTEN</code> (ouvindo), junto com o processo <code>python3</code>.</p>
+</div>
+
+<pre class="term">$ ss -tlnp
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22           0.0.0.0:*     users:(("sshd",1012))
+TCP   LISTEN 0      128    0.0.0.0:8000         0.0.0.0:*     users:(("python3",2031))</pre>
+
+<hr>
+
+<h2>Passo 3 — acessar com curl (e ver o 200 OK)</h2>
+<p>Abra outro terminal e peça a página com <code>curl</code>. Sem opções, o curl imprime só o <strong>corpo</strong> da resposta; com <code>-i</code>, ele imprime também os <strong>headers</strong> — e a primeira linha é o <strong>status</strong>: <code>HTTP/1.1 200 OK</code> (o servidor achou o arquivo e está entregando).</p>
+<pre class="term">$ curl localhost:8000
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;Oi! Sou o site da Ana.&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;
+$ curl -i localhost:8000
+HTTP/1.1 200 OK
+Server: SimpleHTTP/0.6 Python/3.12.3
+Content-Type: text/html
+Content-Length: 58
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;Oi! Sou o site da Ana.&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+<p>O <code>localhost</code> (ou <code>127.0.0.1</code>) é o endereço que aponta para <strong>a própria máquina</strong> — é o "eu mesmo" dos endereços IP. A porta 8000 é a <strong>porta da casa</strong> onde o servidor está ouvindo.</p>
+
+<div class="try" data-goal="200 OK" data-solucao="curl -i localhost:8000">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i localhost:8000</code> no terminal e veja o <code>200 OK</code> na primeira linha da resposta.</p>
+</div>
+
+<div class="try" data-goal="Server:" data-solucao="curl -i localhost:8000">
+<p class="try-task"><strong>Missão extra:</strong> na mesma saída, procure o header <code>Server:</code> — ele diz quem atendeu o pedido (na máquina real apareceria <code>SimpleHTTP/... Python/...</code>).</p>
+</div>
+
+<hr>
+
+<h2>Passo 4 — e no navegador?</h2>
+<p>Numa máquina real, basta abrir <code>http://localhost:8000</code> no navegador — ele faz o mesmo <code>GET</code> que o curl fez e renderiza o HTML. Se outra pessoa da mesma rede quiser ver, acesse pelo IP da máquina: <code>http://192.168.1.50:8000</code> (desde que o firewall não bloqueie a 8000 — aula de <a href="firewall-iptables.html">firewall</a>).</p>
+
+<div class="warning">
+<strong>Erro real: porta já em uso</strong>
+<pre class="term">$ python3 -m http.server 8000
+Traceback (most recent call last):
+  ...
+OSError: [Errno 98] Address already in use</pre>
+<p><strong>Causa:</strong> já existe um servidor na porta 8000 (o seu mesmo, de outro terminal, ou outro programa). <strong>Solução:</strong> veja quem está com a porta com <code>ss -tlnp</code>, mate o processo antigo (<kbd>Ctrl</kbd>+<kbd>C</kbd> no terminal dele) ou escolha outra porta: <code>python3 -m http.server 8001</code>. A página <a href="problemas.html">Problemas comuns</a> lista esse e outros erros.</p>
+</div>
+
+<hr>
+
+<h2>Resumo do projeto</h2>
+<ul>
+  <li>Servir um site local = rodar um servidor HTTP numa porta: <code>python3 -m http.server 8000</code>.</li>
+  <li><code>curl localhost:8000</code> traz só o corpo; <code>curl -i localhost:8000</code> traz <code>HTTP/1.1 200 OK</code> + headers + corpo.</li>
+  <li><code>ss -tlnp</code> mostra a porta 8000 em <code>LISTEN</code>, com o processo que está ouvindo.</li>
+  <li>Porta ocupada dá <code>Address already in use</code> — troque de porta ou mate o processo antigo.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="projeto-api-publica.html">Projeto 2 — testar uma API pública com curl e dig</a> — agora para fora de casa: <code>dig api.exemplo.com</code> + <code>curl -i https://api.exemplo.com/usuarios</code>.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

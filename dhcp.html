@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DHCP: como seu computador pega IP automático (Discover, Offer, Request, Acknowledge) | Guia Redes</title>
+<meta name="description" content="Como o DHCP entrega IP, máscara, gateway e DNS automaticamente para o seu computador na hora em que ele entra na rede: o ciclo DORA (Discover, Offer, Request, Acknowledge), o conceito de lease (aluguel por tempo), o que acontece quando o DHCP falha (IP 169.254.x.x APIPA) e como ver o resultado com ip route (proto dhcp) e cat /etc/resolv.conf. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>DHCP: pegar <span class="hl">IP automático</span></h1>
+
+<p class="intro">Quando o notebook da Ana entra no Wi-Fi, ele não sabe nem o próprio IP. O <strong>DHCP</strong> (Dynamic Host Configuration Protocol) é o protocolo que resolve isso: é como chegar numa festa e o anfitrião entregar um <strong>crachá com número</strong> (o IP 192.168.1.50), dizer a porta de saída do salão (o gateway 192.168.1.1) e o telefone da recepção (os DNS 192.168.1.1 e 8.8.8.8). Você usa o crachá durante a festa — e o devolve quando vai embora.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O ciclo <strong>DORA</strong>: Discover → Offer → Request → Acknowledge.</li>
+  <li>O que o DHCP entrega além do IP: máscara, gateway padrão, DNS, <strong>lease</strong> (tempo de validade).</li>
+  <li>O servidor DHCP geralmente é o próprio roteador (192.168.1.1).</li>
+  <li>O que acontece quando o DHCP falha: IP <code>169.254.x.x</code> (APIPA).</li>
+  <li>Como ver o resultado: <code>ip route</code> (linha com <code>proto dhcp</code>) e <code>cat /etc/resolv.conf</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O ciclo DORA, passo a passo</h2>
+<p>Quando o computador liga na rede, acontece uma conversa de 4 mensagens (todas em broadcast/UDP porta 67–68):</p>
+<dl class="anatomy">
+  <dt>1. Discover</dt><dd>O computador grita na rede local: <em>"Tem servidor DHCP aqui? Preciso de um IP!"</em> (origem ainda é 0.0.0.0, porque ele não tem IP).</dd>
+  <dt>2. Offer</dt><dd>O servidor DHCP (o roteador) responde: <em>"Posso te dar o 192.168.1.50, com máscara /24, gateway 192.168.1.1 e DNS 192.168.1.1, 8.8.8.8, válido por 24h"</em>.</dd>
+  <dt>3. Request</dt><dd>O computador responde: <em>"Aceito o 192.168.1.50!"</em> (pode haver vários servidores oferecendo; ele escolhe um).</dd>
+  <dt>4. Acknowledge (ACK)</dt><dd>O servidor confirma: <em>"Confirmado, o 192.168.1.50 é seu pelas próximas 24 horas"</em>. Pronto — o computador já pode usar a rede.</dd>
+</dl>
+
+<hr>
+
+<h2>O que o DHCP entrega (o "crachá completo")</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Informação</th><th>Na rede da Ana</th><th>Para que serve</th></tr>
+<tr><td>Endereço IP + máscara</td><td><code>192.168.1.50/24</code></td><td>O endereço da máquina e o tamanho da rede local</td></tr>
+<tr><td>Gateway padrão</td><td><code>192.168.1.1</code></td><td>A "porta de saída" para a internet (<a href="gateway-padrao.html">próxima aula</a>)</td></tr>
+<tr><td>Servidores DNS</td><td><code>192.168.1.1</code>, <code>8.8.8.8</code></td><td>Quem traduz nomes em IPs</td></tr>
+<tr><td>Lease (tempo de validade)</td><td>24 horas (exemplo)</td><td>Depois desse prazo, o computador precisa renovar o "aluguel" do IP</td></tr>
+<tr><td>Domínio de busca</td><td><code>localdomain</code></td><td>Sufixo usado ao resolver nomes curtos</td></tr>
+</table>
+</div>
+<p>O <strong>lease</strong> é importante: se a Ana desligar o notebook, depois de 24h o roteador pode emprestar o 192.168.1.50 para outro dispositivo. É por isso que o IP do celular "muda de vez em quando".</p>
+
+<hr>
+
+<h2>Como ver o resultado no computador</h2>
+<p>A rota padrão mostra que ela veio via DHCP, e o <code>/etc/resolv.conf</code> mostra os DNS recebidos:</p>
+<pre class="term">$ ip route
+default via 192.168.1.1 dev eth0 proto dhcp metric 100     « gateway entregue pelo DHCP
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.50 metric 100</pre>
+<pre class="term">$ cat /etc/resolv.conf
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+search localdomain</pre>
+
+<div class="try" data-goal="proto dhcp" data-solucao="ip route">
+<p class="try-task"><strong>Missão:</strong> rode <code>ip route</code> e encontre <code>proto dhcp</code> na linha do gateway — prova de que o 192.168.1.1 (e o IP da máquina) vieram do DHCP.</p>
+</div>
+
+<div class="try" data-goal="nameserver 8.8.8.8" data-solucao="cat /etc/resolv.conf">
+<p class="try-task"><strong>Missão:</strong> rode <code>cat /etc/resolv.conf</code> e veja os servidores DNS que o DHCP entregou: <code>192.168.1.1</code> e <code>8.8.8.8</code>.</p>
+</div>
+
+<div class="warning">
+<strong>Quando o DHCP falha</strong>
+<p>Se o computador não consegue falar com nenhum servidor DHCP, ele inventa um endereço próprio na faixa <code>169.254.0.0/16</code> (APIPA) — é o equivalente a chegar na festa e ninguém ter crachá para você. Resultado: ele fala só com outros que também estão nessa faixa provisória; a internet não funciona. Ver um IP 169.254.x.x no <code>ip addr</code> é o clássico sinal de "o DHCP não respondeu" (roteador desligado, cabo solto, Wi-Fi sem senha certa…).</p>
+</div>
+
+<div class="warning">
+<strong>IP fixo (manual) também existe</strong>
+<p>Nada obriga a usar DHCP: dá para configurar o IP na mão (192.168.1.50, máscara, gateway, DNS). É comum em servidores — mas se configurar errado (IP fora da faixa, gateway esquecido), a máquina fica isolada. Em casa, deixe no automático.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>DHCP entrega automaticamente: IP + máscara, gateway padrão, DNS e o lease (tempo de validade).</li>
+  <li>O ciclo <strong>DORA</strong>: Discover → Offer → Request → Acknowledge (UDP 67/68, geralmente no roteador).</li>
+  <li>Veja o resultado com <code>ip route</code> (<code>proto dhcp</code>) e <code>cat /etc/resolv.conf</code> (nameservers).</li>
+  <li>Sem DHCP: IP provisório <code>169.254.x.x</code> (APIPA) e internet fora do ar.</li>
+</ul>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">Qual é a ordem correta do ciclo DHCP (DORA)?</p>
+<label><input type="radio" name="q1"> Request → Offer → Discover → Acknowledge</label>
+<label><input type="radio" name="q1"> Discover → Request → Offer → Acknowledge</label>
+<label><input type="radio" name="q1"> Offer → Discover → Acknowledge → Request</label>
+<label><input type="radio" name="q1"> Discover → Offer → Request → Acknowledge</label>
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Seu computador mostra o IP <code>169.254.35.12</code>. O que provavelmente aconteceu?</p>
+<label><input type="radio" name="q2"> Ele pegou um IP público normalmente</label>
+<label><input type="radio" name="q2"> O DHCP não respondeu e o sistema inventou um endereço provisório (APIPA)</label>
+<label><input type="radio" name="q2"> O roteador está com problema de NAT</label>
+<label><input type="radio" name="q2"> O DNS está fora do ar</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="gateway-padrao.html">Gateway padrão: a porta de saída da sua rede</a> — a fundo no <code>192.168.1.1</code> que o DHCP entregou: como a tabela de rotas decide se o pacote vai direto ou passa pelo gateway.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

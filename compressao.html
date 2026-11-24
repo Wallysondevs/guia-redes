@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compressão: gzip, Brotli | Guia Redes</title>
+<meta name="description" content="Compressão de conteúdo web (gzip e Brotli) explicada com a analogia da carta dobrada a vácuo: Accept-Encoding, Content-Encoding, Content-Length menor, Vary. Tabela comparativa sem compressão × gzip × Brotli, quando NÃO comprimir (imagens, vídeos, zip), configuração no nginx e o risco histórico BREACH. Missão com curl -i vendo o Content-Length no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Compressão</span>: gzip e Brotli</h1>
+
+<p class="intro">Uma página web é, no fundo, <strong>texto</strong>: HTML, CSS, JavaScript, JSON — e texto se comprime muito bem, como uma carta dobrada a vácuo antes de ir para o correio (mesma carta, pacote bem menor). Se o seu HTML de 100 KB sai com 25 KB, a página carrega 4 vezes mais rápido em conexões lentas. Essa é a <strong>compressão de conteúdo</strong>: <code>gzip</code> (o clássico) e <code>Brotli</code> (o moderno).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Como funciona a negociação: <code>Accept-Encoding</code> no pedido → <code>Content-Encoding</code> na resposta;</li>
+  <li>Quanto dá para economizar: texto comprime <strong>70–90%</strong>;</li>
+  <li>Tabela comparativa: sem compressão × gzip × Brotli;</li>
+  <li>O que <strong>NÃO</strong> se comprime de novo (imagens, vídeos, ZIP…);</li>
+  <li>Configuração no nginx e o risco histórico BREACH.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A negociação pelo header</h2>
+<p>O cliente (navegador, <code>curl</code>) diz o que aceita no pedido e o servidor escolhe o melhor formato que consegue entregar:</p>
+
+<pre class="term">GET / HTTP/1.1
+Host: exemplo.com
+Accept-Encoding: gzip, deflate, br      ← "aceito gzip ou Brotli"
+
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Content-Encoding: gzip                  ← "mandei em gzip"
+Content-Length: 1256                    ← tamanho DEPOIS de comprimir (o original tinha mais)
+Vary: Accept-Encoding                   ← "essa resposta varia conforme o Accept-Encoding"</pre>
+
+<dl class="anatomy">
+  <dt>Accept-Encoding</dt><dd>Enviado pelo cliente com a lista de algoritmos que ele entende: <code>gzip, deflate, br</code>.</dd>
+  <dt>Content-Encoding</dt><dd>A resposta diz qual foi usado: <code>gzip</code> ou <code>br</code> (Brotli).</dd>
+  <dt>Content-Length</dt><dd>Depois de comprimido — é por isso que a página "fica menor" na rede.</dd>
+  <dt>Vary: Accept-Encoding</dt><dd>Avisa caches/CDNs que a mesma URL pode ter versões diferentes (comprimida ou não) conforme o pedido — importante para a <a href="cdn.html">CDN</a> não servir a versão errada.</dd>
+</dl>
+
+<hr>
+
+<h2>Quanto dá para economizar?</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Conteúdo</th><th>Sem compressão</th><th>gzip</th><th>Brotli (br)</th></tr>
+<tr><td>HTML de 100 KB</td><td>100 KB</td><td>~25 KB</td><td>~20 KB</td></tr>
+<tr><td>CSS de 200 KB</td><td>200 KB</td><td>~35 KB</td><td>~28 KB</td></tr>
+<tr><td>JavaScript de 500 KB</td><td>500 KB</td><td>~120 KB</td><td>~95 KB</td></tr>
+<tr><td>JSON de API de 50 KB</td><td>50 KB</td><td>~8 KB</td><td>~6 KB</td></tr>
+<tr><td>JPEG / PNG / vídeo / ZIP</td><td>já comprimido</td><td>não muda (ou piora um tiquinho)</td><td>não muda</td></tr>
+</table>
+</div>
+
+<p>Regra prática: <strong>texto comprime muito</strong> (HTML/CSS/JS/JSON/SVG), <strong>arquivos já comprimidos não ganham nada</strong> (JPEG, PNG, MP4, ZIP, PDF…).</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>gzip</th><th>Brotli (br)</th></tr>
+<tr><td>Ano</td><td>1992 — está em todo lugar</td><td>2015 — do Google</td></tr>
+<tr><td>Compressão</td><td>Boa (~70–85% no texto)</td><td><strong>Melhor</strong> (~15–25% menor que gzip no texto)</td></tr>
+<tr><td>Velocidade</td><td>Rápido de comprimir e descomprimir</td><td>Compressão mais lenta (vale para arquivos estáticos, cacheados); descompressão rápida</td></tr>
+<tr><td>Suporte</td><td>Universal</td><td>Todos os navegadores modernos; só sobre HTTPS</td></tr>
+<tr><td>Quando usar</td><td>Padrão mínimo obrigatório</td><td>O padrão moderno: ative os dois, o cliente escolhe (<code>br</code> primeiro)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Configurando no nginx (e no proxy reverso)</h2>
+
+<pre class="file"># /etc/nginx/nginx.conf
+http {
+    gzip on;
+    gzip_types text/html text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1000;          # não comprima arquivos minúsculos (não vale a pena)
+    gzip_comp_level 5;             # nível 1–9 (5 é o meio-termo bom)
+
+    brotli on;                     # precisa do módulo ngx_brotli
+    brotli_types text/html text/css application/javascript application/json image/svg+xml;
+    brotli_comp_level 6;
+}</pre>
+
+<p>Em <code>curl</code>, dá para ver a diferença pedindo o conteúdo comprimido: <code>curl -i -H "Accept-Encoding: gzip" http://exemplo.com</code> — o servidor responde com <code>Content-Encoding: gzip</code> e um <code>Content-Length</code> bem menor.</p>
+
+<div class="try" data-goal="Content-Length: 1256" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i http://exemplo.com</code> e veja o header <code>Content-Length: 1256</code>. Na vida real, com gzip ligado, esse número seria bem menor (o HTML original é maior). Compare também <code>curl -i https://exemplo.com</code> e <code>wget exemplo.com</code> (que mostra o tamanho salvo).</p>
+</div>
+
+<div class="warning">
+<strong>Dois cuidados importantes</strong>
+<p>(1) <strong>Não comprima duas vezes</strong>: imagens, vídeos e ZIP já são comprimidos — passar gzip em cima só gasta CPU e pode até aumentar o tamanho. Liste só texto nos <code>*_types</code>. (2) <strong>BREACH</strong>: antigamente, comprimir uma página que mistura conteúdo público com um segredo (ex.: token CSRF) permitia adivinhar o segredo pelo tamanho da resposta comprimida. Hoje isso está mitigado (TLS moderno, e a dica de não comprimir respostas com dados sensíveis embutidos) — mas lembre que <strong>compressão + segredo na mesma resposta é perigoso</strong>.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Compressão de conteúdo = mandar o texto "dobrado a vácuo": <code>Accept-Encoding: gzip, br</code> → resposta com <code>Content-Encoding</code> e <code>Content-Length</code> menor.</li>
+  <li>Texto (HTML/CSS/JS/JSON) comprime 70–90%; gzip é universal, <strong>Brotli é ~20% menor</strong> e só funciona sobre HTTPS.</li>
+  <li>No nginx: <code>gzip on</code> + <code>brotli on</code> com a lista de <code>*_types</code> só de texto e <code>gzip_min_length</code>.</li>
+  <li>Nunca comprima de novo arquivos já comprimidos (imagem/vídeo/zip) e cuidado com BREACH (segredo + compressão na mesma resposta).</li>
+  <li>A <code>Vary: Accept-Encoding</code> garante que a CDN guarde versões separadas por formato.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="tls-detalhes.html">TLS a fundo: handshake, certificados, HSTS</a> — a criptografia que protege essa conversa (e o "s" do https).</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

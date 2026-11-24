@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto 5 — monitorar portas abertas com ss, nc e script watch | Guia Redes</title>
+<meta name="description" content="Projeto prático de redes: veja todas as portas em escuta (LISTEN) do notebook com ss -tlnp e netstat -tlnp, teste se uma porta abre com nc -zv localhost 8000, escaneie o próprio host com nmap localhost e monte um monitor ao vivo com watch -n 1 ss -tlnp (script em arquivo). Missões no terminal simulado da máquina ana@notebook.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto 5 — <span class="hl">monitorar portas</span> com ss + script</h1>
+
+<p class="intro">Uma máquina ligada em rede é como uma casa com várias portas: algumas estão <strong>abertas e ouvindo</strong> (um servidor esperando conexões), outras fechadas. Saber quais portas estão abertas no seu computador é essencial para segurança — porta aberta demais é porta de entrada para invasores. Neste projeto a Ana vai listar as portas do notebook, testar uma a uma e deixar um monitor rodando ao vivo.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li><code>ss -tlnp</code>: listar portas TCP em escuta (<code>LISTEN</code>) com o processo responsável.</li>
+  <li><code>netstat -tlnp</code>: o mesmo, no formato antigo (ainda existe em muitos sistemas).</li>
+  <li><code>nc -zv localhost 8000</code>: testar se uma porta abre, sem mandar dados.</li>
+  <li><code>nmap localhost</code>: escanear as portas do próprio host.</li>
+  <li>Um script com <code>watch</code> que atualiza a lista sozinha a cada 2 segundos.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Passo 1 — listar as portas em escuta: ss -tlnp</h2>
+<p>O comando <code>ss</code> (<em>socket statistics</em>) mostra os <strong>sockets</strong> — as "pontas" das conexões. As opções do dia a dia:</p>
+<dl class="anatomy">
+  <dt>-t</dt><dd>Só sockets TCP.</dd>
+  <dt>-u</dt><dd>Só sockets UDP (ex.: <code>ss -ulnp</code> mostra o DNS em UDP 53).</dd>
+  <dt>-l</dt><dd>Só os que estão <strong>escutando</strong> (LISTEN) — os servidores esperando conexão.</dd>
+  <dt>-n</dt><dd>Mostra números (portas/IPs) em vez de nomes — mais rápido e sem consulta DNS reversa.</dd>
+  <dt>-p</dt><dd>Mostra o processo dono do socket (precisa de permissão; por isso o <code>sudo</code> em alguns casos).</dd>
+</dl>
+<pre class="term">$ ss -tlnp
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22           0.0.0.0:*     users:(("sshd",1012))
+TCP   LISTEN 0      128    0.0.0.0:8000         0.0.0.0:*     users:(("python3",2031))</pre>
+<p>Tradução: o notebook tem a <strong>porta 22</strong> aberta (o servidor SSH, para acesso remoto) e a <strong>porta 8000</strong> (o site do projeto 1). <code>0.0.0.0:22</code> significa "ouvindo em <em>todos</em> os IPs da máquina" — se fosse <code>127.0.0.1:8000</code>, só o próprio computador alcançaria.</p>
+
+<div class="try" data-goal="LISTEN" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> e ache as portas em <code>LISTEN</code> (22 do sshd e 8000 do python3).</p>
+</div>
+
+<hr>
+
+<h2>Passo 2 — testar uma porta específica: nc -zv</h2>
+<p>Quer saber se a porta 8000 responde <em>agora</em>, sem mandar requisição HTTP? O <code>nc</code> (netcat) é o "canivete suisse" das portas: com <code>-z</code> ele só escaneia, com <code>-v</code> ele fala o resultado:</p>
+<pre class="term">$ nc -zv localhost 8000
+Connection to localhost 8000 port [tcp/*] succeeded!
+$ nc -zv localhost 9999
+nc: connect to localhost 9999 port [tcp/*] failed: Connection refused</pre>
+
+<div class="try" data-goal="succeeded" data-solucao="nc -zv localhost 8000">
+<p class="try-task"><strong>Missão:</strong> rode <code>nc -zv localhost 8000</code> e veja <code>succeeded!</code> — a porta do site está aberta. Depois teste <code>nc -zv localhost 9999</code> (porta fechada).</p>
+</div>
+
+<hr>
+
+<h2>Passo 3 — escanear o próprio host: nmap localhost</h2>
+<p>O <code>nmap</code> é a ferramenta clássica de scan de portas (aula <a href="scan-portas-etico.html">scan de portas — só no que é seu</a>):</p>
+<pre class="term">$ nmap localhost
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.000030s latency).
+PORT     STATE  SERVICE
+22/tcp   open   ssh
+8000/tcp open   http-alt
+
+Nmap done: 1 IP address (1 host up) scanned in 0.08 seconds</pre>
+
+<div class="try" data-goal="Nmap scan report" data-solucao="nmap localhost">
+<p class="try-task"><strong>Missão:</strong> rode <code>nmap localhost</code> e veja o relatório de portas abertas do próprio notebook.</p>
+</div>
+
+<div class="warning">
+<strong>Ética e lei:</strong> só rode <code>nmap</code> em máquinas <strong>suas</strong> ou com autorização escrita. Escanear a rede do vizinho ou de uma empresa sem permissão é crime (no Brasil, invasão de dispositivo — art. 154-A do Código Penal). Use essa ferramenta para auditar a sua própria rede.</div>
+
+<hr>
+
+<h2>Passo 4 — monitor ao vivo com watch + script</h2>
+<p>Em vez de rodar <code>ss</code> toda hora, deixe um script vigiando. Salve o arquivo abaixo e rode com o <code>watch</code>, que re-executa o comando a cada 2 segundos e limpa a tela:</p>
+<pre class="file">~/monitor-portas.sh
+#!/bin/bash
+# Mostra as portas TCP em escuta e marca as porta 22/8000
+ss -tlnp | grep -E 'LISTEN|Netid' | \
+  sed -e 's/:22 /:22 (ssh) /' -e 's/:8000 /:8000 (site) /'</pre>
+<pre class="term">$ chmod +x ~/monitor-portas.sh
+$ watch -n 2 ~/monitor-portas.sh
+Every 2.0s: /home/ana/monitor-portas.sh          notebook
+
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22 (ssh)     0.0.0.0:*     users:(("sshd",1012))
+TCP   LISTEN 0      128    0.0.0.0:8000 (site)  0.0.0.0:*     users:(("python3",2031))</pre>
+<p>Na máquina real dá para ir além: <code>watch -n 1 'ss -tlnp'</code> puro já funciona; ou um laço com <code>while true; do clear; ss -tlnp; sleep 2; done</code>. Para registrar em arquivo (log de auditoria): <code>while true; do ss -tlnp; date; sleep 60; done &gt;&gt; ~/portas.log &amp;</code>.</p>
+
+<div class="try" data-goal="0.0.0.0:8000" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> de novo e ache <code>0.0.0.0:8000</code> — essa é a porta do site do projeto 1, aberta em todos os IPs da máquina.</p>
+</div>
+
+<hr>
+
+<h2>Resumo do projeto</h2>
+<ul>
+  <li><code>ss -tlnp</code> = portas TCP em LISTEN + processo dono; <code>netstat -tlnp</code> é o equivalente antigo.</li>
+  <li><code>nc -zv HOST PORTA</code> testa se a porta abre na hora (<code>succeeded!</code> / <code>refused</code>).</li>
+  <li><code>nmap localhost</code> escaneia o próprio host — use só no que é seu.</li>
+  <li><code>watch -n 2 script.sh</code> vira o comando num monitor ao vivo.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> acabou a seção Projetos! Vá para a <a href="ref-comandos.html">cola de comandos de rede</a> — a tabela completa para consultar sempre que precisar.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

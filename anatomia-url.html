@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anatomia de uma URL — protocolo, domínio, porta, caminho, query e fragmento | Guia Redes</title>
+<meta name="description" content="Anatomia completa de uma URL: https://exemplo.com:443/caminho?busca=rede#secao — protocolo (scheme), domínio (host), porta (implícita 443 no HTTPS, 80 no HTTP), caminho (path), query string (?chave=valor) e fragmento (#âncora). Cada peça explicada com analogia e exemplo real, e curl -i comparando HTTP (porta 80) com HTTPS (porta 443) no terminal simulado. Missão: curl -i https://exemplo.com.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Anatomia de uma <span class="hl">URL</span></h1>
+
+<p class="intro">Uma URL é o <strong>endereço completo do pedido</strong>: diz <em>como</em> falar (protocolo), <em>com quem</em> falar (domínio), <em>em qual sala</em> (porta), <em>o que</em> você quer (caminho), <em>com quais parâmetros</em> (query) e <em>em que parte</em> da página (fragmento). Vamos abrir essa URL peça por peça:</p>
+
+<div class="note">
+<strong>Anatomia da URL de exemplo</strong>
+<pre class="file">https://exemplo.com:443/produtos?busca=rede&amp;pagina=2#resultados</pre>
+</div>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Cada peça de uma URL: <code>https</code>, <code>exemplo.com</code>, <code>:443</code>, <code>/produtos</code>, <code>?busca=rede&amp;pagina=2</code>, <code>#resultados</code>.</li>
+  <li>Portas implícitas: HTTP usa 80, HTTPS usa 443 — por isso você nunca as digita.</li>
+  <li>A diferença entre caminho (path), query (?chave=valor) e fragmento (#).</li>
+  <li>Ver na prática com <code>curl -i</code>: HTTP na porta 80 vs HTTPS na porta 443.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Peça por peça</h2>
+<dl class="anatomy">
+  <dt>https</dt><dd>O <strong>protocolo</strong> (scheme): como a conversa vai acontecer. <code>https</code> = HTTP + criptografia TLS. Outros: <code>http</code>, <code>ftp</code>.</dd>
+  <dt>://</dt><dd>Separador depois do protocolo.</dd>
+  <dt>exemplo.com</dt><dd>O <strong>domínio</strong> (host): o nome do servidor. O DNS traduz esse nome para um IP (próxima aula). Pode virar IP direto: <code>https://93.184.216.34</code>.</dd>
+  <dt>:443</dt><dd>A <strong>porta</strong>. Quase sempre omitida porque cada protocolo tem sua porta padrão: HTTP = 80, HTTPS = 443. Escrever <code>:443</code> é o mesmo que não escrever nada.</dd>
+  <dt>/produtos</dt><dd>O <strong>caminho</strong> (path): qual página/recurso dentro do servidor — como o corredor e a porta do apartamento.</dd>
+  <dt>?busca=rede&amp;pagina=2</dt><dd>Os <strong>parâmetros de consulta</strong> (query string): pares <code>chave=valor</code> separados por <code>&amp;</code>, depois do <code>?</code>. É o bilhete com detalhes do pedido ("procuro 'rede', página 2").</dd>
+  <dt>#resultados</dt><dd>O <strong>fragmento</strong>: âncora dentro da página (rola até a seção "resultados"). Ele <em>não vai para o servidor</em> — só o navegador usa.</dd>
+</dl>
+
+<hr>
+
+<h2>Porta escondida na URL</h2>
+<p>Você nunca vê <code>:80</code> nem <code>:443</code> nos sites, porque o navegador completa sozinho:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>URL</th><th>Porta usada (implícita)</th><th>O que acontece</th></tr>
+<tr><td><code>http://exemplo.com</code></td><td><code>80</code></td><td>Cliente bate na sala 80 do servidor (HTTP puro)</td></tr>
+<tr><td><code>https://exemplo.com</code></td><td><code>443</code></td><td>Cliente bate na sala 443 (HTTP + TLS, criptografado)</td></tr>
+<tr><td><code>https://exemplo.com:8443</code></td><td><code>8443</code></td><td>Porta explícita: bate na sala 8443, não na padrão</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Na prática: HTTP vs HTTPS no terminal</h2>
+<p>Compare as respostas: o HTTP responde <code>HTTP/1.1 200 OK</code> (porta 80); o HTTPS responde <code>HTTP/2 200</code> (porta 443, criptografado, e com o cabeçalho <code>strict-transport-security</code> que obriga o navegador a sempre usar HTTPS):</p>
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+
+&lt;html&gt;…&lt;/html&gt;
+$ curl -i https://exemplo.com
+HTTP/2 200
+server: nginx/1.25.3
+content-type: text/html; charset=UTF-8
+strict-transport-security: max-age=31536000
+
+&lt;html&gt;…&lt;/html&gt;</pre>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i https://exemplo.com</code> e aperte <kbd>Enter</kbd>. A primeira linha da resposta (<code>HTTP/2 200</code>) mostra que a conversa aconteceu na porta 443, com criptografia.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>URL completa: <code>protocolo://domínio:porta/caminho?query#fragmento</code>.</li>
+  <li><code>https</code> = protocolo seguro; <code>exemplo.com</code> = domínio (o DNS traduz para IP); porta implícita 443 (HTTPS) ou 80 (HTTP).</li>
+  <li><code>/caminho</code> = o recurso pedido; <code>?chave=valor</code> = parâmetros enviados ao servidor; <code>#ancora</code> = só o navegador usa.</li>
+  <li><code>curl -i</code> deixa visível a diferença: HTTP responde <code>HTTP/1.1 200 OK</code>, HTTPS responde <code>HTTP/2 200</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="o-que-e-dns.html">DNS: a agenda telefônica da internet</a> — como o nome <code>exemplo.com</code> vira o IP <code>93.184.216.34</code>.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

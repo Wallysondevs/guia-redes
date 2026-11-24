@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cookies e sessões HTTP: como o servidor lembra de você | Guia Redes</title>
+<meta name="description" content="Como funcionam cookies e sessões HTTP: o servidor manda Set-Cookie no login e o navegador devolve Cookie em cada requisição. Tipos de cookie (sessão vs persistente), atributos Path, Expires/Max-Age, HttpOnly, Secure e SameSite, o risco de sequestro de sessão e como testar com curl. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Cookies e sessões</span> — a memória do servidor</h1>
+
+<p class="intro">O HTTP é <strong>sem estado</strong> (stateless): cada requisição é uma carta nova, e o servidor não lembra da anterior. Mas então como ele sabe que você está logado? A analogia da festa resolve: na entrada, depois de conferir seu documento, o segurança te dá uma <strong>pulseirinha</strong> — o <strong>cookie</strong>. Nas próximas portas, basta mostrar a pulseira: o servidor "lembra" de você sem nova fila.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O fluxo de login com <code>Set-Cookie</code> (resposta) e <code>Cookie</code> (requisição).</li>
+  <li>Cookie de <strong>sessão</strong> vs <strong>persistente</strong> (Expires / Max-Age).</li>
+  <li>Os atributos de segurança: <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite</code>, <code>Path</code>.</li>
+  <li>Por que cookie roubado é perigoso (sequestro de sessão).</li>
+  <li>Testar tudo com <code>curl</code> no simulador.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O fluxo de login, passo a passo</h2>
+<ol>
+  <li>O cliente manda <code>POST /login</code> com usuário e senha no corpo.</li>
+  <li>O servidor confere e responde <code>200 OK</code> com o header <code>Set-Cookie: sessao=abc123…</code>.</li>
+  <li>O navegador <strong>guarda</strong> esse cookie.</li>
+  <li>Em cada requisição seguinte, o navegador manda o header <code>Cookie: sessao=abc123…</code>.</li>
+  <li>O servidor riconosce a sessão e devolve a página como se fosse você logado.</li>
+</ol>
+<pre class="term">$ curl -i -X POST -d '{"usuario":"ana","senha":"segredo"}' https://exemplo.com/login
+HTTP/1.1 200 OK
+Content-Type: text/html
+Set-Cookie: sessao=abc123xyz; Path=/; HttpOnly; Secure; SameSite=Lax
+
+&lt;html&gt;… login ok …&lt;/html&gt;
+$ curl -i -H "Cookie: sessao=abc123xyz" https://exemplo.com/painel
+HTTP/1.1 200 OK
+Content-Type: text/html
+
+&lt;html&gt;… bem-vinda, Ana! …&lt;/html&gt;</pre>
+<p>O exemplo acima é ilustrativo (num servidor real); no simulador não há página de login, mas dá para ver headers de resposta e mandar POST com dados — é o que as missões abaixo fazem.</p>
+
+<hr>
+
+<h2>Anatomia do Set-Cookie</h2>
+<dl class="anatomy">
+  <dt>Set-Cookie:</dt><dd>O header de resposta que <strong>cria</strong> o cookie no navegador.</dd>
+  <dt>sessao=abc123xyz</dt><dd><strong>nome=valor</strong> do cookie — é esse valor que identifica sua sessão.</dd>
+  <dt>Path=/</dt><dd>O cookie vale para todas as páginas do site.</dd>
+  <dt>HttpOnly</dt><dd>JavaScript da página <strong>não pode ler</strong> o cookie (protege contra roubo por XSS).</dd>
+  <dt>Secure</dt><dd>O cookie só trafega por <strong>HTTPS</strong> (nunca em texto puro).</dd>
+  <dt>SameSite=Lax</dt><dd>O navegador não manda o cookie em requisições vindas de <strong>outros sites</strong> (protege contra CSRF).</dd>
+</dl>
+
+<hr>
+
+<h2>Tipos de cookie</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo</th><th>Como nasce</th><th>Quando morre</th></tr>
+<tr><td><strong>Cookie de sessão</strong></td><td>Sem <code>Expires</code> nem <code>Max-Age</code></td><td>Quando você <strong>fecha o navegador</strong>.</td></tr>
+<tr><td><strong>Cookie persistente</strong></td><td>Com <code>Expires=data</code> ou <code>Max-Age=segundos</code></td><td>Na data marcada — sobrevive a dias (ex.: "lembrar de mim" por 30 dias).</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Testando no simulador</h2>
+<p>O simulador não tem login real, mas você consegue (1) ver os <strong>headers da resposta</strong> — que é onde o <code>Set-Cookie</code> apareceria — e (2) mandar um <strong>POST com dados</strong>, como um formulário de login:</p>
+
+<div class="try" data-goal="content-type: application/json" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> veja os headers da resposta da API (é por aí que o servidor mandaria o <code>Set-Cookie</code>): <code>curl -i https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="try" data-goal="POST api.exemplo.com" data-solucao="curl -v -X POST -d '{&quot;usuario&quot;:&quot;ana&quot;,&quot;senha&quot;:&quot;123&quot;}' https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> simule o POST de um login (usuário e senha no corpo): <code>curl -v -X POST -d '{"usuario":"ana","senha":"123"}' https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="try" data-goal="Ana" data-solucao="curl https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> depois do "login", um GET simples já traz seus dados (com o cookie, seria automático): <code>curl https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="warning">
+<strong>Cookie de sessão roubado = sequestro de sessão:</strong> se alguém copia o valor do seu cookie, entra no site <strong>como se fosse você</strong>. Por isso: <code>Secure</code> (só HTTPS), <code>HttpOnly</code> (JavaScript não acessa) e sessão curta. Nunca guarde a senha dentro do cookie — guarde só um identificador aleatório. E o logout deve invalidar a sessão <strong>no servidor</strong>, não só apagar o cookie no navegador.
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Em cada requisição depois do login, quem manda o cookie de volta ao servidor?</p>
+<label><input type="radio" name="q1"> O servidor DNS</label>
+<label><input type="radio" name="q1"> O navegador/cliente, no header <code>Cookie</code></label>
+<label><input type="radio" name="q1"> O roteador, no header <code>Host</code></label>
+<label><input type="radio" name="q1"> Ninguém — o servidor lembra sozinho</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>HTTP não tem memória: o login funciona porque o servidor manda <code>Set-Cookie</code> e o cliente devolve <code>Cookie</code> em toda requisição.</li>
+  <li>Cookie de sessão morre ao fechar o navegador; persistente tem <code>Expires</code>/<code>Max-Age</code>.</li>
+  <li>Segurança: <code>Secure</code> (só HTTPS), <code>HttpOnly</code> (fora do alcance do JS), <code>SameSite</code> (protege contra sites terceiros).</li>
+  <li>No curl real dá para guardar cookies num arquivo: <code>-c jar.txt</code> (guarda) e <code>-b jar.txt</code> (envia).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="https-tls.html">HTTPS e TLS: a conversa criptografada</a> — o cadeado que protege o cookie (e a senha) no caminho entre você e o servidor.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

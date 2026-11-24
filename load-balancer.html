@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Load balancer: dividir o tráfego | Guia Redes</title>
+<meta name="description" content="Load balancer explicado com a analogia dos guichês do banco: algoritmos round-robin, least connections e IP hash; balanceamento na camada 4 (L4, TCP/IP) vs camada 7 (L7, HTTP); health check para tirar servidores fora; sessão persistente (sticky). Tabela comparativa L4 × L7 e missão com curl na API fictícia do simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Load balancer</span>: dividir o tráfego</h1>
+
+<p class="intro">Um servidor só aguenta tanta gente. Quando um site cresce, a solução não é só comprar um servidor maior — é colocar <strong>vários servidores iguais</strong> e um <strong>atendente na porta</strong> que manda cada visitante para o servidor que está mais livre. Esse atendente é o <strong>load balancer</strong> (balanceador de carga). Analogia: a fila única do banco com vários guichês, e o segurança na entrada distribuindo as senhas.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Por que um servidor só não escala para sempre;</li>
+  <li>Os <strong>algoritmos</strong>: round-robin, least connections, IP hash;</li>
+  <li>Balanceamento <strong>L4</strong> (transporte: IP+porta) × <strong>L7</strong> (aplicação: HTTP, path, host);</li>
+  <li><strong>Health check</strong>: tirar servidor doente da fila automaticamente;</li>
+  <li>Sessão persistente (sticky session) — quando precisa.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Como funciona</h2>
+
+<pre class="term">usuário ──► load balancer (IP público do site, ex.: 93.184.216.34)
+                 │ decide para qual servidor mandar
+                 ├──► servidor A (10.0.0.11:3000)
+                 ├──► servidor B (10.0.0.12:3000)
+                 └──► servidor C (10.0.0.13:3000)  « IPs internos, escondidos</pre>
+
+<p>O usuário só enxerga o IP do load balancer. Os servidores de trás ficam numa rede interna (o proxy reverso da aula <a href="proxy-reverso.html">anterior</a> faz esse papel muito bem — nginx, HAProxy, ou LB de nuvem como AWS ALB/ELB, Cloudflare Load Balancer).</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Algoritmo</th><th>Como escolhe o servidor</th><th>Quando usar</th></tr>
+<tr><td><strong>Round-robin</strong></td><td>Um para A, próximo para B, próximo para C, recomeça.</td><td>Servidores iguais, pedidos parecidos.</td></tr>
+<tr><td><strong>Least connections</strong></td><td>Manda para o servidor com <strong>menos conexões abertas</strong> agora.</td><td>Pedidos de duração variada (downloads, APIs pesadas).</td></tr>
+<tr><td><strong>IP hash</strong></td><td>Hash do IP do cliente → sempre cai no mesmo servidor.</td><td>Quando precisa de sessão persistente (sticky).</td></tr>
+<tr><td><strong>Least response time</strong></td><td>Manda para o servidor que está respondendo mais rápido.</td><td>Ambientes heterogêneos.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>L4 × L7: duas camadas de balanceamento</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>Load balancer L4 (transporte)</th><th>Load balancer L7 (aplicação)</th></tr>
+<tr><td>Olha o quê</td><td>IP e porta (TCP/UDP) — não abre o conteúdo</td><td>O pedido HTTP completo: URL, path, host, headers, cookies</td></tr>
+<tr><td>Velocidade</td><td>Muito rápido, menos processamento</td><td>Um pouco mais lento, mais esperto</td></tr>
+<tr><td>Pode</td><td>Dividir o tráfego "cegamente"</td><td>Rotear por caminho: <code>/api</code> → servidores de API, <code>/imagens</code> → servidores de arquivos; fazer TLS, cache, reescrita de URL</td></tr>
+<tr><td>Exemplos</td><td>HAProxy modo TCP, AWS NLB</td><td><strong>nginx</strong>, HAProxy modo HTTP, AWS ALB, Cloudflare</td></tr>
+</table>
+</div>
+
+<p>Na prática, quase todo mundo usa <strong>L7 com HTTP/HTTPS</strong> hoje — dá para fazer muito mais. O L4 ainda faz sentido para protocolos que não são HTTP (bancos de dados, jogos, VoIP).</p>
+
+<hr>
+
+<h2>Health check: o atendente que tira o guichê fechado</h2>
+<p>O load balancer <strong>testa os servidores o tempo todo</strong> (ex.: manda um <code>GET /health</code> a cada 5 segundos). Se um servidor não responder (ou responder erro), ele entra na quarentena: <strong>não recebe mais tráfego</strong> até voltar a passar no teste. Assim, um servidor que caiu não derruba a experiência de ninguém — os outros absorvem a carga. É a mesma ideia do DNS com vários registros (aula de <a href="como-dns-funciona.html">DNS</a>).</p>
+
+<div class="warning">
+<strong>Sessão persistente (sticky session)</strong>
+<p>Se a aplicação guarda estado na memória do servidor (ex.: o "carrinho de compras" fica na RAM do servidor A), mandar o mesmo usuário para o servidor B faz ele "perder" o carrinho. Soluções: cookie que grudada no servidor (sticky), ou — melhor — guardar a sessão num lugar comum (Redis, banco de dados), deixando os servidores <strong>stateless</strong> (sem estado), que é como se faz hoje em dia.</p>
+</div>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl https://api.exemplo.com/usuarios</code> várias vezes. Na vida real, cada pedido pode cair num servidor diferente atrás do load balancer — e todos respondem <code>HTTP/2 200</code> com o mesmo JSON. rode também <code>curl -i https://api.exemplo.com/usuarios/999</code> e veja o <code>404</code>.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Load balancer = "atendente" que distribui os pedidos entre vários servidores (que ficam escondidos numa rede interna).</li>
+  <li>Algoritmos: round-robin, least connections, IP hash (sticky).</li>
+  <li><strong>L4</strong> vê só IP/porta; <strong>L7</strong> lê o HTTP e roteia por path/host — é o mais comum hoje (nginx, HAProxy, ALB).</li>
+  <li><strong>Health check</strong> tira automaticamente da fila o servidor que caiu.</li>
+  <li>Prefira servidores stateless + sessão em Redis/banco, em vez de depender de sticky session.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="http2-http3.html">HTTP/2 e HTTP/3 (QUIC)</a> — depois de distribuir os pedidos entre servidores, vamos ver como conversar com eles mais rápido.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

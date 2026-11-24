@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VPN: túnel criptografado | Guia Redes</title>
+<meta name="description" content="VPN explicada com a analogia do tubo lacrado pelo correio: túnel criptografado (WireGuard, OpenVPN, IPsec) sobre a internet pública. Tipos (acesso remoto, site-to-site, split tunnel), tabela VPN × proxy, o que a VPN protege e o que ela NÃO protege (não é anonimato), riscos de VPN grátis e vazamento de DNS/WebRTC. Missão com curl HTTPS no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">VPN</span>: túnel criptografado</h1>
+
+<p class="intro">Imagine que você precisa mandar uma carta sigilosa, mas só tem o correio público — qualquer um pode abrir. A solução: colocar a carta dentro de um <strong>tubo de metal lacrado</strong> e mandar pelo correio: o carteiro entrega o tubo, mas não consegue ler dentro. Uma <strong>VPN</strong> (Virtual Private Network) é exatamente isso na internet: um <strong>túnel criptografado</strong> dentro da rede pública, como se seu computador estivesse ligado por um cabo direto até o outro lado.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o túnel: um pacote criptografado dentro de outro pacote (encapsulamento de novo!);</li>
+  <li>Os protocolos de VPN: <strong>WireGuard, OpenVPN, IPsec</strong>;</li>
+  <li>Tipos: <strong>acesso remoto</strong> (home office), <strong>site-to-site</strong> (matriz ↔ filial) e split tunnel;</li>
+  <li>Tabela comparativa <strong>VPN × proxy</strong>;</li>
+  <li>O que a VPN protege e o que ela <strong>NÃO</strong> protege (ela não é anonimato).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Como funciona o túnel</h2>
+<p>Sem VPN, seu pacote sai "pelado": qualquer roteador no caminho (a aula de <a href="bgp-intro.html">BGP</a>) pode ver (e teoricamente ler) o destino e, se não houver TLS, o conteúdo. Com VPN:</p>
+
+<pre class="term">Sem VPN:   notebook ──► pacote IP normal ──► internet ──► site
+           (o provedor vê para onde você vai)
+
+Com VPN:   notebook ──► pacote criptografado ──► internet ──► servidor VPN ──► site
+           │ └────── túnel ──────┘ │
+           (o provedor vê só "você fala com o servidor VPN", nada mais)</pre>
+
+<p>Tecnicamente, é <strong>encapsulamento de novo</strong> (aula <a href="encapsulamento.html">encapsulamento</a>): o pacote original (seu IP → IP do site) vira o <em>conteúdo</em> de um pacote novo criptografado (seu IP → IP do servidor VPN). Quem vê de fora só enxerga o túnel.</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Protocolo</th><th>Características</th></tr>
+<tr><td><strong>WireGuard</strong></td><td>Moderno, enxuto (~4 mil linhas de código), rápido, usa UDP; padrão hoje em dia em quase todo lugar.</td></tr>
+<tr><td><strong>OpenVPN</strong></td><td>Maduro e flexível, usa TLS sobre TCP ou UDP; mais pesado, mas roda em tudo.</td></tr>
+<tr><td><strong>IPsec</strong></td><td>Padrão corporativo antigo (usado entre roteadores de empresas); mais complexo de configurar.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Tipos de VPN</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo</th><th>Analogia</th><th>Exemplo</th></tr>
+<tr><td><strong>Acesso remoto</strong></td><td>Um tubo do seu notebook até a empresa.</td><td>Home office acessando a rede interna da firma.</td></tr>
+<tr><td><strong>Site-to-site</strong></td><td>Um túnel permanente entre dois prédios.</td><td>Matriz em São Paulo ligada à filial no Rio como se fosse a mesma rede local.</td></tr>
+<tr><td><strong>Split tunnel</strong></td><td>Só parte do tráfego passa no tubo; o resto vai direto.</td><td>Só o acesso à intranet da empresa passa pela VPN; o YouTube vai direto.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>VPN × proxy: não confunda</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>Proxy</th><th>VPN</th></tr>
+<tr><td>Escopo</td><td>Só um aplicativo/navegador</td><td><strong>Todo o tráfego</strong> do sistema</td></tr>
+<tr><td>Criptografia</td><td>Geralmente nenhuma (só redireciona)</td><td><strong>Sim</strong> — o túnel é criptografado</td></tr>
+<tr><td>O que esconde</td><td>O destino, só do app que usa o proxy</td><td>Destino e conteúdo, de toda a rede</td></tr>
+<tr><td>Uso típico</td><td>Burlar região, cache (aula de <a href="proxy-reverso.html">proxy</a>)</td><td>Privacidade, home office, Wi-Fi público</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Usos reais</h2>
+<ul>
+  <li><strong>Wi-Fi público</strong> (café, aeroporto): o túnel protege seus logins de quem estiver espionando a rede local;</li>
+  <li><strong>Home office</strong>: acessar servidores internos da empresa como se estivesse no escritório;</li>
+  <li><strong>Privacidade do provedor</strong>: seu provedor de internet vê só o túnel até o servidor VPN;</li>
+  <li><strong>Acessar conteúdo de outra região</strong>: ao sair pelo servidor VPN de outro país, o site acha que você está lá (isso é uso de proxy também).</li>
+</ul>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://exemplo.com</code>. Dentro de uma VPN, a requisição sairia pelo servidor VPN e voltaria pelo túnel — para o <code>exemplo.com</code>, pareceria uma conexão direta, com <code>HTTP/2 200</code>.</p>
+</div>
+
+<div class="warning">
+<strong>VPN não é anonimato — e VPN grátis é risco</strong>
+<p>(1) O servidor VPN <strong>sabe quem você é</strong> (você fez login nele) e vê para onde você vai (se o site não usar HTTPS). (2) "VPN grátis" ganha dinheiro de outros jeitos — alguns vendem dados de navegação ou injetam anúncios. (3) Vazamentos: se o túnel cai, seu tráfego pode voltar a sair direto (kill switch existe para impedir isso), e o <strong>DNS pode vazar</strong> fora do túnel (DNS leak), assim como o WebRTC no navegador. Prefira provedores pagos, auditados e com política de não-logs comprovada.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>VPN = <strong>túnel criptografado</strong> dentro da internet pública: pacote original vira conteúdo de um pacote novo (encapsulamento + criptografia).</li>
+  <li>Protocolos: <strong>WireGuard</strong> (moderno e rápido), OpenVPN, IPsec (corporativo).</li>
+  <li>Tipos: acesso remoto, site-to-site e split tunnel. VPN ≠ proxy: VPN criptografa e cobre o sistema inteiro.</li>
+  <li>Protege em Wi-Fi público e esconde tráfego do provedor local — mas o servidor VPN passa a ver o seu tráfego, e VPN não deixa você anônimo.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="firewall-iptables.html">Firewall: iptables/nftables básico</a> — a "portaria" que decide quem entra e quem sai da sua máquina.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

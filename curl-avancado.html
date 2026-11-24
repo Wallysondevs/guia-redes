@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>curl avançado: -i, -I, -v, -X, -d e JSON pela linha de comando | Guia Redes</title>
+<meta name="description" content="Domine o curl: -i mostra os headers da resposta junto com o corpo, -I traz só o cabeçalho, -v mostra a conversa inteira (linhas com * e >), -X muda o método HTTP e -d envia dados JSON para APIs (POST/PUT/PATCH em api.exemplo.com). Tabela de opções úteis (-H, -L, -o, --max-time) e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">curl avançado</span> — a chave inglesa das requisições</h1>
+
+<p class="intro">Na aula <a href="comando-curl.html">seu primeiro curl</a> você fez requisições simples. Agora vamos ligar o modo completo do curl: as opções que mostram os <a href="headers-http.html">headers</a>, revelam a conversa inteira, mudam o <a href="metodos-http.html">método</a> e mandam dados para APIs.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li><code>-i</code> — resposta com headers + corpo.</li>
+  <li><code>-I</code> — só o cabeçalho da resposta (rápido para testar).</li>
+  <li><code>-v</code> — modo verboso: a conversa inteira, linha por linha.</li>
+  <li><code>-X METODO</code> e <code>-d 'dados'</code> — mandar verbos e JSON para a API.</li>
+  <li>A tabela de opções úteis: <code>-H</code>, <code>-L</code>, <code>-o</code>, <code>--max-time</code>…</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>-i: corpo + cabeçalho</h2>
+<p>Sem opções, o curl mostra só o corpo. Com <code>-i</code> (<em>include</em>), os <strong>headers da resposta</strong> vêm antes:</p>
+<pre class="term">$ curl -i https://api.exemplo.com/usuarios
+HTTP/2 200
+content-type: application/json
+content-length: 87
+
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]</pre>
+
+<hr>
+
+<h2>-I: só o cabeçalho</h2>
+<p>Com <code>-I</code> (<em>head</em>), o servidor devolve <strong>somente os headers</strong>, sem o corpo — ótimo para testar se um site está no ar e qual status devolve:</p>
+<pre class="term">$ curl -I https://exemplo.com
+HTTP/2 200
+server: nginx/1.25.3
+content-type: text/html; charset=UTF-8
+strict-transport-security: max-age=31536000</pre>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -I https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> teste o status de um site sem baixar o corpo: <code>curl -I https://exemplo.com</code></p>
+</div>
+
+<hr>
+
+<h2>-v: a conversa inteira</h2>
+<p>Com <code>-v</code> (<em>verbose</em>), o curl conta tudo o que acontece:</p>
+<pre class="term">$ curl -v -X POST -d '{"nome":"Ana"}' https://api.exemplo.com/usuarios
+* Trying 93.184.216.35:443...          « tenta abrir a conexão TCP na porta 443
+* Connected to api.exemplo.com (93.184.216.35) port 443   « conectou!
+> POST api.exemplo.com/usuarios HTTP/1.1   « o que o curl ENVIOU (linha de requisição)
+> Host: api.exemplo.com
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json     « o -d avisou que o corpo é JSON
+> Content-Length: 15
+>
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]   « corpo da resposta
+* Connection #0 to host api.exemplo.com left intact</pre>
+<ul>
+  <li>Linhas com <code>*</code> = o progresso da <strong>conexão</strong> (resolver o nome, abrir o TCP).</li>
+  <li>Linhas com <code>&gt;</code> = o que o curl <strong>enviou</strong> (requisição).</li>
+  <li>No curl real, as linhas com <code>&lt;</code> mostram a resposta; no simulador, a resposta aparece depois do <code>&gt;</code> em branco.</li>
+</ul>
+
+<dl class="anatomy">
+  <dt>curl</dt><dd>O programa.</dd>
+  <dt>-v</dt><dd>Verboso: mostra a conversa inteira.</dd>
+  <dt>-X</dt><dd>"O próximo argumento é o método HTTP".</dd>
+  <dt>POST</dt><dd>O método (verbo) — criar algo novo.</dd>
+  <dt>-d</dt><dd>"O próximo argumento é o corpo da mensagem" (data).</dd>
+  <dt>'{"nome":"Ana"}'</dt><dd>O corpo em JSON — por isso vai entre aspas simples (o shell não pode quebrar nos espaços).</dd>
+  <dt>https://api.exemplo.com/usuarios</dt><dd>A URL (sempre o último argumento).</dd>
+</dl>
+
+<div class="try" data-goal="Connected to" data-solucao="curl -v https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> veja a conexão acontecer passo a passo: <code>curl -v https://exemplo.com</code> — procure a linha <code>* Connected to …</code></p>
+</div>
+
+<div class="try" data-goal="POST api.exemplo.com" data-solucao="curl -v -X POST -d '{&quot;nome&quot;:&quot;Ana&quot;}' https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> mande um POST com JSON e veja o verbo na linha enviada: <code>curl -v -X POST -d '{"nome":"Ana"}' https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<hr>
+
+<h2>-X e -d: falar com APIs</h2>
+<p>Juntos, <code>-X</code> e <code>-d</code> são como preencher um formulário pela linha de comando. Sem <code>-X</code>, o curl faz <code>GET</code>; com <code>-d</code>, vira <code>POST</code> por padrão:</p>
+<pre class="term">$ curl -i -X PUT -d '{"nome":"Beto"}' https://api.exemplo.com/usuarios
+HTTP/2 200
+content-type: application/json
+content-length: 87
+
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]
+$ curl -i -X DELETE https://api.exemplo.com/usuarios/999
+HTTP/2 404
+content-type: application/json
+
+{"erro":"usuário não encontrado"}</pre>
+<p><strong>Atenção às aspas:</strong> JSON usa aspas duplas (<code>"nome"</code>), então envolva o dado em <strong>aspas simples</strong>: <code>-d '{"nome":"Ana"}'</code>. Se o JSON tiver espaços, as aspas são obrigatórias — senão o shell quebra o comando no meio.</p>
+
+<div class="try" data-goal="Ana" data-solucao="curl https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> baixe só o corpo da resposta (sem headers) e ache a Ana no JSON: <code>curl https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="try" data-goal="content-type: application/json" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> confirme que a API responde JSON vendo o header: <code>curl -i https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<hr>
+
+<h2>Tabela de opções úteis</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Opção</th><th>O que faz</th></tr>
+<tr><td><code>-i</code></td><td>Mostra os headers da resposta junto com o corpo.</td></tr>
+<tr><td><code>-I</code></td><td>Mostra <strong>só</strong> os headers (pedido HEAD).</td></tr>
+<tr><td><code>-v</code></td><td>Modo verboso: mostra a conversa inteira.</td></tr>
+<tr><td><code>-X METODO</code></td><td>Escolhe o método: <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>…</td></tr>
+<tr><td><code>-d 'dados'</code></td><td>Envia o corpo da requisição (vira POST se não houver -X).</td></tr>
+<tr><td><code>-H 'Header: valor'</code></td><td>Acrescenta um header (ex.: <code>-H 'Authorization: Bearer xyz'</code>).</td></tr>
+<tr><td><code>-L</code></td><td>Segue redirecionamentos (301/302) automaticamente.</td></tr>
+<tr><td><code>-o arquivo</code></td><td>Salva a resposta num arquivo (tipo o <code>wget</code>).</td></tr>
+<tr><td><code>--max-time N</code></td><td>Desiste se passar de N segundos (evita travar).</td></tr>
+<tr><td><code>-s</code></td><td>Silencioso: não mostra a barra de progresso.</td></tr>
+</table>
+</div>
+
+<div class="warning">
+<strong>Nunca use <code>-k</code> em produção:</strong> ela faz o curl <strong>ignorar erros de certificado HTTPS</strong> (desliga a segurança do cadeado — aula <a href="https-tls.html">HTTPS/TLS</a>). Só em testes locais, com certificado autoassinado.
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">O que faz o <code>curl -v</code>?</p>
+<label><input type="radio" name="q1"> Deixa a resposta mais rápida</label>
+<label><input type="radio" name="q1"> Baixa a página em paralelo</label>
+<label><input type="radio" name="q1"> Mostra a conversa inteira: conexão, o que foi enviado e recebido</label>
+<label><input type="radio" name="q1"> Criptografa a requisição</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>curl URL</code> = GET só com o corpo; <code>-i</code> = + headers da resposta; <code>-I</code> = só headers; <code>-v</code> = conversa inteira.</li>
+  <li><code>-X METODO</code> troca o verbo; <code>-d '…'</code> manda o corpo (JSON entre aspas simples!).</li>
+  <li>Na API fictícia: <code>https://api.exemplo.com/usuarios</code> lista usuários (200) e <code>/usuarios/999</code> devolve 404.</li>
+  <li>Para APIs reais, você ainda vai usar <code>-H 'Authorization: …'</code> (token) e <code>-L</code> (redirecionamentos).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="cookies-sessoes.html">Cookies e sessões</a> — como o servidor usa headers (<code>Set-Cookie</code> / <code>Cookie</code>) para lembrar do seu login entre uma requisição e outra.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

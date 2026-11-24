@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto 4 — rede virtual entre duas VMs no VirtualBox | Guia Redes</title>
+<meta name="description" content="Projeto prático de redes: crie duas VMs no VirtualBox e ligue as duas numa rede interna (host-only / intnet), de modo que uma enxergue a outra sem sair para a internet. Passo a passo: adaptador em rede interna, IPs 192.168.1.50 e 192.168.1.60, ping entre as VMs, ssh ana@192.168.1.60 e ip addr em cada uma. Missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto 4 — <span class="hl">rede virtual</span> entre duas VMs (VirtualBox)</h1>
+
+<p class="intro">Até agora a Ana falava com máquinas da internet. E se você quiser <strong>duas máquinas suas conversando entre si, sem sair para a internet</strong> — como duas bancadas de trabalho ligadas por um cabo de rede só entre elas? É exatamente o que a placa de rede <strong>"Rede interna" (intnet)</strong> do VirtualBox faz: um switch virtual dentro do seu computador.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os modos de rede do VirtualBox e quando usar <strong>Rede interna</strong> (só as VMs se enxergam).</li>
+  <li>A configurar IP fixo nas duas VMs da mesma sub-rede (192.168.1.50 e 192.168.1.60/24).</li>
+  <li>A testar a conectividade com <code>ping 192.168.1.60</code> — o ping mostra o IP entre parênteses.</li>
+  <li>A entrar numa VM a partir da outra com <code>ssh ana@192.168.1.60</code>.</li>
+  <li>A conferir tudo com <code>ip addr</code> e <code>arp</code> (a tabela de vizinhos da rede local).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Passo 1 — criar a segunda VM e a rede interna</h2>
+<p>No VirtualBox: <strong>Máquina → Nova</strong> crie uma segunda VM (ex.: "vm2", Ubuntu Server). Com as duas desligadas, vá em <strong>Configurações → Rede → Adaptador 1</strong> de cada uma e escolha:</p>
+<dl class="anatomy">
+  <dt>Modo: Rede interna</dt><dd>Cria uma rede virtual só entre as VMs do seu computador (nome padrão <code>intnet</code>). Não há acesso à internet por esse adaptador — é um cabo direto entre as máquinas.</dd>
+  <dt>Modo: Placa em modo bridge</dt><dd>A VM entra na sua rede real (ganha IP do roteador) — serve para a VM falar com a internet e com o host.</dd>
+  <dt>Modo: NAT</dt><dd>A VM sai para a internet "por trás" do host, mas não é alcançável de fora — o padrão do VirtualBox.</dd>
+</dl>
+<p>Para este projeto, deixe as duas VMs com o <strong>Adaptador 1 em "Rede interna"</strong> (nome <code>intnet</code>).</p>
+
+<hr>
+
+<h2>Passo 2 — IPs na mesma sub-rede</h2>
+<p>Ligue as duas VMs. Sem DHCP nessa rede interna, configure IP fixo em cada uma (ou ligue o DHCP do VirtualBox em <strong>Configurações → Rede → DHCP</strong>). Na <strong>vm1</strong> (a máquina da Ana) já temos <code>192.168.1.50/24</code>; na <strong>vm2</strong> configure <code>192.168.1.60/24</code>:</p>
+<pre class="term"># na vm2:
+$ sudo ip addr add 192.168.1.60/24 dev enp0s3
+$ sudo ip link set enp0s3 up
+$ ip addr show enp0s3
+2: enp0s3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 state UP
+    inet 192.168.1.60/24 scope global enp0s3</pre>
+<p>Mesma sub-rede (<code>/24</code> = 192.168.1.0/24) significa: "estamos no mesmo corredor, dá para falar direto, sem roteador no meio".</p>
+
+<hr>
+
+<h2>Passo 3 — pingar a outra VM</h2>
+<p>Na vm1, teste a comunicação. O ping manda pacotes ICMP; se a vm2 responder, aparece <code>64 bytes from …</code>:</p>
+<pre class="term">$ ping -c 3 192.168.1.60
+PING 192.168.1.60 (192.168.1.60) 56(84) bytes of data.
+64 bytes from 192.168.1.60: icmp_seq=1 ttl=64 time=0.42 ms
+64 bytes from 192.168.1.60: icmp_seq=2 ttl=64 time=0.38 ms
+64 bytes from 192.168.1.60: icmp_seq=3 ttl=64 time=0.51 ms
+
+--- 192.168.1.60 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss</pre>
+<p>Repare: como você digitou o <strong>IP direto</strong>, não houve consulta DNS — o ping foi direto na rede local. Tempo de 0,4 ms é o typical de duas VMs no mesmo host.</p>
+
+<div class="try" data-goal="64 bytes from 192.168.1.60" data-solucao="ping 192.168.1.60">
+<p class="try-task"><strong>Missão:</strong> no simulador (a máquina da Ana), rode <code>ping 192.168.1.60</code> — o servidorzinho do projeto 3 — e veja as linhas <code>64 bytes from 192.168.1.60</code>.</p>
+</div>
+
+<hr>
+
+<h2>Passo 4 — entrar na outra máquina com SSH</h2>
+<p>Com a rede no ar, a Ana acessa a vm2 por SSH (porta 22) sem sair da vm1:</p>
+<pre class="term">$ ssh ana@192.168.1.60
+ana@192.168.1.60's password:
+Welcome to Ubuntu 24.04 LTS (vm2)
+ana@vm2:~$ hostname
+vm2
+ana@vm2:~$ exit</pre>
+<p>O SSH cifra a conexão — diferente do telnet, onde a senha passa em texto puro pela rede (aula <a href="tcp-vs-udp.html">TCP vs UDP</a> e <a href="https-tls.html">HTTPS/TLS</a> explicam por quê isso importa).</p>
+
+<div class="try" data-goal="Conectando em" data-solucao="ssh ana@192.168.1.60">
+<p class="try-task"><strong>Missão:</strong> rode <code>ssh ana@192.168.1.60</code> no simulador e veja a mensagem de conexão simulada.</p>
+</div>
+
+<hr>
+
+<h2>Passo 5 — conferindo a vizinhança: arp</h2>
+<p>Depois do ping, a vm1 guardou o <strong>endereço MAC</strong> da vm2 na tabela ARP (a "lista de quem mora no meu corredor" da camada 2):</p>
+<pre class="term">$ arp -a
+Address                  HWtype  HWaddress           Flags Mask  Iface
+192.168.1.1              ether   00:11:22:33:44:55   C          eth0
+192.168.1.60             ether   66:77:88:99:aa:bb   C          eth0</pre>
+
+<div class="try" data-goal="66:77:88:99:aa:bb" data-solucao="arp">
+<p class="try-task"><strong>Missão:</strong> rode <code>arp</code> (ou <code>arp -a</code>) no simulador e ache o MAC de <code>192.168.1.60</code>.</p>
+</div>
+
+<div class="warning">
+<strong>Se o ping falhar entre as VMs:</strong> confira, na ordem — (1) as duas estão no mesmo modo "Rede interna" e com o <em>mesmo nome</em> de rede (<code>intnet</code>); (2) os IPs estão na mesma sub-rede (<code>ip addr</code> nas duas); (3) o firewall da VM destino não bloqueia ICMP/SSH (porta 22). Na máquina real, <code>ss -tlnp</code> na vm2 mostra se o sshd está ouvindo. Veja a página <a href="problemas.html">Problemas comuns</a>.</div>
+
+<hr>
+
+<h2>Resumo do projeto</h2>
+<ul>
+  <li>Rede interna do VirtualBox = switch virtual só entre VMs (sem internet).</li>
+  <li>Mesma sub-rede → comunicação direta: <code>ping 192.168.1.60</code> responde <code>64 bytes from</code>.</li>
+  <li><code>ssh ana@192.168.1.60</code> entra na outra VM pela porta 22.</li>
+  <li><code>ip addr</code> confere os IPs; <code>arp</code> mostra os vizinhos descobertos.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="projeto-monitor-portas.html">Projeto 5 — monitorar portas abertas com ss + script watch</a> — voltando para a máquina da Ana: quais portas estão abertas agora?</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

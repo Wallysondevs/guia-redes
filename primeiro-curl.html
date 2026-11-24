@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seu primeiro curl — pedir uma página pela linha de comando | Guia Redes</title>
+<meta name="description" content="Seu primeiro curl: o comando que faz o papel do navegador na linha de comando e traz a página de um servidor. Veja a resposta completa com curl -i (status HTTP/2 200, cabeçalhos e o corpo HTML), pegar só o corpo, e chamar uma API JSON (api.exemplo.com/usuarios devolve uma lista de nomes). Missões no terminal simulado: curl -i https://exemplo.com e curl https://api.exemplo.com/usuarios.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Seu primeiro <span class="hl">curl</span></h1>
+
+<p class="intro">O <code>curl</code> é a canivete suíço da linha de comando: ele faz o <strong>papel do navegador</strong> — fala HTTP com um servidor e traz a resposta para o seu terminal. Nesta aula você faz o seu primeiro pedido de página com <code>curl -i</code> (mostrando os cabeçalhos) e descobre que dá para chamar <strong>APIs</strong> também, que respondem em JSON.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que o <code>curl</code> faz: envia uma requisição HTTP para uma URL e imprime a resposta.</li>
+  <li>A diferença de <code>curl URL</code> (só o corpo) para <code>curl -i URL</code> (cabeçalhos + corpo).</li>
+  <li>Ler a resposta: <code>HTTP/2 200</code>, cabeçalhos como <code>content-type</code> e o corpo HTML.</li>
+  <li>Chamar uma API e receber <strong>JSON</strong> (dados puros, não página).</li>
+  <li>Que <code>curl exemplo.com</code> completa <code>http://</code> sozinho.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O primeiro pedido: cabeçalhos + corpo</h2>
+<p>Com a opção <code>-i</code>, o curl imprime os <strong>cabeçalhos da resposta</strong> antes do conteúdo — é a conversa inteira do HTTP:</p>
+<pre class="term">$ curl -i https://exemplo.com
+HTTP/2 200
+server: nginx/1.25.3
+content-type: text/html; charset=UTF-8
+strict-transport-security: max-age=31536000
+
+&lt;html&gt;&lt;head&gt;&lt;title&gt;Exemplo&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Exemplo.com (HTTPS)&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+<p>Peças: a primeira linha <code>HTTP/2 200</code> é o status (deu certo); os cabeçalhos dizem o servidor (<code>nginx</code>), o tipo do conteúdo (<code>text/html</code>) e o HSTS (obrigação de usar HTTPS); depois da linha em branco vem o <strong>corpo</strong>: o HTML da página.</p>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i https://exemplo.com</code> e aperte <kbd>Enter</kbd>. Você pediu a página como se fosse o navegador e recebeu <code>HTTP/2 200</code> + cabeçalhos + HTML.</p>
+</div>
+
+<hr>
+
+<h2>Só o corpo, sem cabeçalho</h2>
+<p>Sem o <code>-i</code>, o curl imprime <strong>só o corpo</strong> — só o conteúdo, pronto para ser usado:</p>
+<pre class="term">$ curl https://exemplo.com
+&lt;html&gt;&lt;head&gt;&lt;title&gt;Exemplo&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Exemplo.com (HTTPS)&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+
+<hr>
+
+<h2>Chamando uma API: a resposta em JSON</h2>
+<p>Nem toda URL devolve página HTML — <strong>APIs</strong> devolvem dados puros em <strong>JSON</strong>. Experimente a API fictícia do simulador:</p>
+<pre class="term">$ curl https://api.exemplo.com/usuarios
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]</pre>
+<p>Repare: é só texto com cara de lista de objetos — <code>"nome":"Ana"</code> etc. É assim que apps pegam dados de servidores (previsão do tempo, saldo do banco, mensagens…).</p>
+
+<div class="try" data-goal='{"id":1,"nome":"Ana"}' data-solucao="curl https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl https://api.exemplo.com/usuarios</code> e aperte <kbd>Enter</kbd>. A API devolve a lista em JSON, começando por <code>{"id":1,"nome":"Ana"}</code>.</p>
+</div>
+
+<hr>
+
+<h2>Detalhes de uso</h2>
+<ul>
+  <li>Sem protocolo, o curl assume HTTP: <code>curl exemplo.com</code> = <code>curl http://exemplo.com</code>.</li>
+  <li>Se o nome não existe no DNS, o erro aparece na hora: <code>curl: (6) Could not resolve host: …</code>.</li>
+  <li>Outras opções que você vai usar já já: <code>-v</code> (mostra a conversa inteira), <code>-I</code> (só os cabeçalhos), <code>-X POST -d '…'</code> (envia dados), <code>-o arquivo</code> (salva no arquivo).</li>
+</ul>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>curl URL</code> faz uma requisição HTTP e imprime a resposta — é o navegador da linha de comando.</li>
+  <li><code>curl -i</code> mostra os cabeçalhos (status <code>HTTP/2 200</code>, tipo do conteúdo) + o corpo; sem <code>-i</code>, vem só o corpo.</li>
+  <li>Sites devolvem HTML; APIs devolvem JSON (dados puros), como <code>api.exemplo.com/usuarios</code>.</li>
+  <li>Sem protocolo na URL, o curl completa com <code>http://</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="comando-ping.html">O comando ping a fundo</a> — opções, estatísticas e os erros mais comuns (como nome que não resolve).</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

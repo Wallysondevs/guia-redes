@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TTL e propagação de DNS: por que a mudança demora para valer | Guia Redes</title>
+<meta name="description" content="O que é TTL (time to live) em registros DNS e por que mudanças de IP demoram a propagar: cada resolver guarda a resposta em cache até o TTL vencer. Como ver o TTL no dig (ex.: 3600 segundos), a estratégia de baixar o TTL antes de migrar um site e subir depois, onde ficam os caches e whois para ver a data de criação do domínio. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">TTL e propagação</span> — o prazo de validade da agenda</h1>
+
+<p class="intro">Quando o número de telefone de uma empresa muda, nem todo mundo fica sabendo na hora: cada gráfica telefônica (cada <strong>resolver DNS</strong>) guarda a ficha antiga no arquivo morto até vencer o prazo. Esse prazo é o <strong>TTL</strong> (time to live), em segundos, gravado em cada registro DNS. <strong>Propagação</strong> é exatamente esse tempo de espera até o mundo inteiro trocar a ficha.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o <strong>TTL</strong> e onde ele aparece na resposta do <code>dig</code>.</li>
+  <li>Por que existem <strong>caches</strong> em vários lugares (resolver, sistema, navegador).</li>
+  <li>A estratégia para mudar um registro <strong>sem esperar dias</strong>: baixar o TTL antes, mudar, e subir depois.</li>
+  <li>Ver a data de criação de um domínio com <code>whois</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O TTL aparece na resposta do dig</h2>
+<p>Olhe a resposta de <code>dig exemplo.com</code> — o segundo campo da ANSWER SECTION é o TTL:</p>
+<pre class="term">$ dig exemplo.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 4821
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;exemplo.com.           IN      A
+
+;; ANSWER SECTION:
+exemplo.com.            3600    IN      A       93.184.216.34
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+<dl class="anatomy">
+  <dt>exemplo.com.</dt><dd>O <strong>nome</strong> que foi consultado.</dd>
+  <dt>3600</dt><dd>O <strong>TTL em segundos</strong> (3600 = 1 hora): qualquer resolver pode guardar essa resposta em cache por até 1 hora sem perguntar de novo.</dd>
+  <dt>IN</dt><dd>A classe: <strong>IN</strong>ternet.</dd>
+  <dt>A</dt><dd>O <strong>tipo</strong> do registro (IPv4).</dd>
+  <dt>93.184.216.34</dt><dd>O <strong>valor</strong>.</dd>
+</dl>
+
+<div class="try" data-goal="3600" data-solucao="dig exemplo.com">
+<p class="try-task"><strong>Missão:</strong> ache o TTL (em segundos) na resposta do dig: <code>dig exemplo.com</code> — procure o número <code>3600</code> na ANSWER SECTION</p>
+</div>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> e com <code>+short</code> você vê só o valor: <code>dig exemplo.com +short</code></p>
+</div>
+
+<hr>
+
+<h2>Como fazer uma mudança propagar rápido</h2>
+<p>Se a Ana vai trocar o IP do site dela (migrar de servidor), ela não quer esperar o TTL antigo vencer no mundo inteiro. A estratégia:</p>
+<ol>
+  <li><strong>Dias antes</strong>, baixe o TTL do registro no DNS (ex.: de 86400 para <strong>300</strong> = 5 minutos).</li>
+  <li>Espere o TTL <em>antigo</em> vencer — assim todos os caches do mundo já expiraram.</li>
+  <li>Faça a mudança de verdade (aponte para o IP novo).</li>
+  <li>Agora a propagação acontece em <strong>minutos</strong>, porque todo mundo só podia guardar a resposta por 5 minutos.</li>
+  <li>Depois que tudo estiver no ar, <strong>suba o TTL de volta</strong> (3600–86400) para aliviar os servidores DNS.</li>
+</ol>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Situação</th><th>TTL recomendado</th></tr>
+<tr><td>Vai mudar o registro em breve (migração de servidor)</td><td><code>300</code>–<code>600</code> (5–10 min)</td></tr>
+<tr><td>Uso normal do dia a dia</td><td><code>3600</code> (1h) a <code>86400</code> (1 dia)</td></tr>
+<tr><td>Registro que quase nunca muda (MX, TXT, NS)</td><td><code>86400</code> (1 dia)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>O cache existe em vários lugares</h2>
+<ul>
+  <li>No <strong>resolver</strong> (192.168.1.1, 8.8.8.8) — o maior de todos.</li>
+  <li>No <strong>sistema operacional</strong> da sua máquina.</li>
+  <li>No <strong>navegador</strong>.</li>
+</ul>
+<p>Por isso, durante uma propagação, dois dispositivos podem ver IPs diferentes ao mesmo tempo — um já pegou a resposta nova, o outro ainda está com o cache velho. Para ver a resposta "oficial", use <code>dig exemplo.com +trace</code> (pergunta direto na fonte, aula <a href="dig-avancado.html">dig avançado</a>) ou pergunte direto ao autoritativo: <code>dig @ns1.exemplo.com exemplo.com</code>.</p>
+
+<h2>E o whois conta a história do domínio</h2>
+<pre class="term">$ whois exemplo.com
+Domain Name: EXEMPLO.COM
+Registry: Verisign
+Creation Date: 1995-08-14
+Name Server: NS1.EXEMPLO.COM</pre>
+
+<div class="try" data-goal="Creation Date" data-solucao="whois exemplo.com">
+<p class="try-task"><strong>Missão:</strong> veja desde quando o domínio existe: <code>whois exemplo.com</code> — ache a linha <code>Creation Date</code></p>
+</div>
+
+<div class="warning">
+<strong>TTL baixo demais tem custo:</strong> se deixar o TTL em 300 para sempre, todo resolver do mundo precisa perguntar de novo a cada 5 minutos — mais tráfego, mais latência. Depois que a mudança propagar, <strong>não esqueça de subir o TTL</strong>. E registros de e-mail (MX) costumam demorar mais, porque alguns servidores de e-mail guardam cache por mais tempo.
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Na linha <code>exemplo.com.  3600  IN  A  93.184.216.34</code>, o que é o <code>3600</code>?</p>
+<label><input type="radio" name="q1"> A porta do servidor DNS</label>
+<label><input type="radio" name="q1"> O número do registro no cartório</label>
+<label><input type="radio" name="q1"> O TTL: o tempo, em segundos, que a resposta pode ficar em cache</label>
+<label><input type="radio" name="q1"> O tamanho da resposta em bytes</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>TTL = tempo, em segundos, que uma resposta DNS pode ficar em cache antes de ser perguntada de novo.</li>
+  <li>Propagação = o tempo até todos os caches do mundo vencerem — por isso mudanças de IP demoram.</li>
+  <li>Para migrar rápido: baixe o TTL dias antes (300), mude o registro, espere propagar, depois suba o TTL (3600–86400).</li>
+  <li>O TTL aparece no dig entre o nome e o tipo: <code>exemplo.com.  3600  IN  A  93.184.216.34</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="modelo-osi.html">Modelo OSI: as 7 camadas</a> — começa o <strong>Nível 3 (avançado)</strong>: como o pacote é montado camada por camada, do cabo até a aplicação.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

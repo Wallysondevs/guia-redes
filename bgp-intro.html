@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BGP: como a internet se conecta entre si | Guia Redes</title>
+<meta name="description" content="BGP (Border Gateway Protocol) explicado com a analogia dos bairros e das fofocas de rotas: o que é um AS (Sistema Autônomo), ASN, prefixos anunciados, AS_PATH, next hop, e por que o BGP escolhe caminhos por política (acordos) e não só por distância. Veja o caminho entre ASs com traceroute e whois no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">BGP</span>: como a internet se conecta entre si</h1>
+
+<p class="intro">Até agora vimos o pacote dentro da sua rede e pulando de roteador em roteador. Mas quem decide <strong>por qual provedor, país ou cabo submarino</strong> esse pacote vai? A resposta é o <strong>BGP</strong> (Border Gateway Protocol) — o protocolo que faz a internet inteira conversar. Analogia: a internet é uma cidade feita de <strong>bairros</strong>, e o BGP é a fofoca organizada entre os síndicos de cada bairro dizendo "da minha rua dá para chegar na sua assim".</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é um <strong>AS</strong> (Sistema Autônomo) e o seu número, o <strong>ASN</strong>;</li>
+  <li>Como o BGP <strong>anuncia rotas</strong> (prefixos IP) entre ASs vizinhos;</li>
+  <li>O que são <strong>AS_PATH, next hop</strong> e por que o BGP escolhe por "política", não só por distância;</li>
+  <li>A diferença entre roteamento <strong>interno</strong> (IGP: OSPF/IS-IS) e <strong>externo</strong> (BGP);</li>
+  <li>Por que um erro de BGP derruba a internet inteira (casos reais).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>AS: os bairros da internet</h2>
+<p>Um <strong>Sistema Autônomo (AS)</strong> é uma rede (ou conjunto de redes) sob uma única administração — o provedor da Ana, o Google, a universidade, uma grande empresa. Cada AS tem um número único, o <strong>ASN</strong> (ex.: AS15169 = Google, AS28571 = Vivo, AS262… da Oi). Dentro do AS, os roteadores usam protocolos internos (IGP, tipo <strong>OSPF</strong> ou <strong>IS-IS</strong>) para saber o caminho interno. <strong>Entre ASs diferentes, quem manda é o BGP</strong>.</p>
+
+<pre class="term">Sua casa (192.168.1.50)
+   └── roteador 192.168.1.1  →  AS do provedor da Ana (ex.: AS28571)
+        └── … cabos, cidades, países …
+             → AS do Google (AS15169)  →  142.250.72.142 (google.com)</pre>
+
+<hr>
+
+<h2>Como o BGP anuncia rotas</h2>
+<p>Cada roteador de borda (falando BGP) <strong>anuncia para os vizinhos</strong> os blocos de IP que ele alcança — os <strong>prefixos</strong>. A mensagem carrega o <strong>AS_PATH</strong>: a lista de ASs que a rota já atravessou. Exemplo real simplificado:</p>
+
+<pre class="term">Rota anunciada:  142.250.72.0/24  (um bloco do Google)
+AS_PATH:         28571 15169      (passou pelo AS da Vivo, chegou no AS do Google)
+Next hop:        o IP do roteador vizinho para o qual enviar</pre>
+
+<p>O vizinho recebe, escolhe a melhor rota segundo suas <strong>políticas</strong> (acordos comerciais, capacidade, "prefiro passar por X do que por Y") e anuncia adiante, adicionando o próprio ASN no caminho. É uma corrente de anúncios: cada AS sabe "para chegar nesse bloco de IP, manda para o meu vizinho Z".</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Conceito</th><th>Significado</th></tr>
+<tr><td><strong>AS / ASN</strong></td><td>Sistema Autônomo e seu número único global (ex.: AS15169).</td></tr>
+<tr><td><strong>Prefixo</strong></td><td>Bloco de IPs anunciado (ex.: <code>142.250.72.0/24</code>) — como o "CEP do bairro".</td></tr>
+<tr><td><strong>AS_PATH</strong></td><td>A lista de ASNs que a rota já atravessou — serve para evitar loops e escolher caminho mais curto em ASs.</td></tr>
+<tr><td><strong>Next hop</strong></td><td>O próximo roteador para onde encaminhar o pacote dessa rota.</td></tr>
+<tr><td><strong>IGP</strong> (OSPF, IS-IS)</td><td>Roteamento <em>dentro</em> do AS ("qual a melhor rua dentro do meu bairro").</td></tr>
+<tr><td><strong>EGP</strong> (BGP)</td><td>Roteamento <em>entre</em> ASs ("como sair do meu bairro e chegar no seu").</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Por que política, e não só distância?</h2>
+<p>Ao contrário do OSPF (que escolhe o caminho de menor custo interno), o BGP não liga só para quilômetros: ele respeita <strong>acordos comerciais</strong> entre provedores. Se o AS da Ana tem acordo pago com o AS X, mas não com o Y, o tráfego vai por X mesmo que Y seja fisicamente mais perto. Por isso o caminho do seu pacote até um site pode dar voltas enormes — e mudar de um dia para o outro, sem que nada esteja "quebrado".</p>
+
+<div class="try" data-goal="traceroute to google.com" data-solucao="traceroute google.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>traceroute google.com</code> e <code>traceroute exemplo.com</code>. Cada IP dos saltos após o seu gateway pertence, na vida real, a um AS diferente — é o BGP decidindo o caminho entre eles.</p>
+</div>
+
+<div class="try" data-goal="Domain Name: EXEMPLO.COM" data-solucao="whois exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>whois exemplo.com</code> — o registro do domínio mostra os servidores de nome (NS) do dono do site, mantidos num AS qualquer da internet.</p>
+</div>
+
+<div class="warning">
+<strong>Quando o BGP erra, a internet cai</strong>
+<p>Em 2008, um provedor paquistanês anunció por engano os prefixos do YouTube para "bloqueá-lo" no país — e o BGP, sem validar, espalhou o anúncio pelo mundo: durante horas, parte do planeta tentou mandar o tráfego do YouTube para o Paquistão. Em 2021, um erro de configuração derrubou o Facebook (e Instagram e WhatsApp) por ~6 horas. Lições: o BGP <strong>confia nos anúncios</strong> (por isso existe o RPKI/ROV para validar origem) e um erro se propaga rápido demais.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>A internet é uma colcha de <strong>Sistemas Autônomos (ASs)</strong>, cada um com um ASN; dentro do AS vale IGP (OSPF), entre ASs vale <strong>BGP</strong>.</li>
+  <li>O BGP anuncia <strong>prefixos IP</strong> com o AS_PATH e o next hop; a rota escolhida segue <strong>políticas comerciais</strong>, não só distância.</li>
+  <li>O <code>traceroute</code> mostra os saltos entre ASs; o <code>whois</code> mostra quem é o dono do domínio.</li>
+  <li>Erros de anúncio de BGP se propagam pelo mundo — por isso existe validação de rotas (RPKI).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="vpn.html">VPN: túnel criptografado</a> — e se você quiser que ninguém no caminho leia o seu pacote, você cria um túnel.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

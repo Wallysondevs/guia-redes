@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segurança web: OWASP Top 10 | Guia Redes</title>
+<meta name="description" content="OWASP Top 10 (2021) explicado com a analogia do prédio seguro: A01 controle de acesso quebrado, A02 falhas criptográficas, A03 injeção (SQL/XSS), A04 design inseguro, A05 má configuração, A06 componentes vulneráveis, A07 falhas de autenticação, A08 integridade, A09 logs, A10 SSRF. Defesa prática para cada um e missão com curl vendo o 404 sem vazar detalhes no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Segurança web: <span class="hl">OWASP Top 10</span></h1>
+
+<p class="intro">Um prédio pode ter portaria boa e mesmo assim ser invadido por uma janela esquecida no terceiro andar. Em aplicações web acontece o mesmo: não adianta o <a href="tls-detalhes.html">TLS</a> e o <a href="firewall-iptables.html">firewall</a> se o código tem uma porta dos fundos aberta. A <strong>OWASP Top 10</strong> é a lista, mantida pela comunidade OWASP, das <strong>10 falhas de segurança mais comuns e críticas</strong> em aplicações web — a "lista de janelas esquecidas" que todo dev precisa fechar.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>As <strong>10 categorias da OWASP Top 10 (edição 2021)</strong> e o que significa cada uma;</li>
+  <li>Exemplos concretos: SQL injection, XSS, CSRF, SSRF, senhas fracas;</li>
+  <li>A defesa prática para cada uma (validar, parametrizar, CSP, HTTPS, atualizações);</li>
+  <li>A mentalidade: <strong>nunca confie no dado que vem do usuário</strong>;</li>
+  <li>Ver uma resposta de erro bem comportada (404 genérico) com <code>curl -i</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>As 10 falhas (OWASP Top 10 — 2021)</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>#</th><th>Nome</th><th>Em uma frase</th><th>Defesa principal</th></tr>
+<tr><td>A01</td><td><strong>Controle de acesso quebrado</strong></td><td>Usuário comum consegue acessar página/dado de outro usuário (mudar só o ID na URL).</td><td>Verificar permissão no servidor, em TODAS as rotas (não só esconder o link).</td></tr>
+<tr><td>A02</td><td><strong>Falhas criptográficas</strong></td><td>Dados sensíveis (senhas, cartões) guardados ou transmitidos sem criptografia.</td><td>HTTPS em tudo, hash de senha forte (bcrypt/argon2), criptografar dados em repouso.</td></tr>
+<tr><td>A03</td><td><strong>Injeção</strong></td><td>Código malicioso entrou pelo campo de busca/login (SQL injection, XSS, comando no SO).</td><td>Consultas parametrizadas, validar/escapar entrada, CSP contra XSS.</td></tr>
+<tr><td>A04</td><td><strong>Design inseguro</strong></td><td>A arquitetura já nasce errada (ex.: redefinir senha mandando a nova por e-mail em texto claro).</td><td>Modelagem de ameaças (threat modeling) antes de codar.</td></tr>
+<tr><td>A05</td><td><strong>Má configuração de segurança</strong></td><td>Servidor com página de exemplo, listagem de diretório ligada, erro detalhado em produção, padrão de fábrica.</td><td>Hardening, desativar o desnecessário, erros genéricos para o usuário.</td></tr>
+<tr><td>A06</td><td><strong>Componentes vulneráveis</strong></td><td>Biblioteca/framework desatualizado com falha pública conhecida.</td><td>Atualizar sempre, <code>npm audit</code>/<code>dependabot</code>, remover o que não usa.</td></tr>
+<tr><td>A07</td><td><strong>Falhas de autenticação</strong></td><td>Senha fraca, força bruta permitida, token de sessão previsível, "lembrar de mim" mal feito.</td><td>Senha forte + 2FA, limitar tentativas, sessão aleatória e expirável.</td></tr>
+<tr><td>A08</td><td><strong>Falhas de integridade</strong></td><td>Atualização/CI-CD sem assinatura; plugin baixado de fonte duvidosa.</td><td>Assinar releases, verificar integridade (hashes/assinaturas), pipeline seguro.</td></tr>
+<tr><td>A09</td><td><strong>Falhas de log e monitoramento</strong></td><td>Ataque acontece e ninguém percebe (sem log ou log sem nada útil).</td><td>Logar eventos de segurança, alertar, monitorar (e não logar senha!).</td></tr>
+<tr><td>A10</td><td><strong>SSRF</strong> (Server-Side Request Forgery)</td><td>O servidor faz requisição para um endereço que o atacante escolheu (ex.: <code>http://169.254.169.254</code>, os metadados da nuvem).</td><td>Validar/bloquear destinos, lista de IPs permitidos, segmento de rede isolado.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Os três mais famosos em detalhe</h2>
+
+<h3>A03 — Injeção de SQL (SQLi)</h3>
+<p>Se o site monta a consulta colando o que o usuário digitou, o atacante vira o comando. Clássico: no campo de login, digitar <code>' OR '1'='1</code> — a consulta vira <code>SELECT … WHERE user='' OR '1'='1'</code>, que é sempre verdade, e o atacante entra sem senha. <strong>Defesa</strong>: consultas parametrizadas (prepared statements) — o banco trata a entrada sempre como dado, nunca como código.</p>
+
+<h3>A03 — XSS (Cross-Site Scripting)</h3>
+<p>O atacante injeta um <code>&lt;script&gt;</code> num campo (ex.: comentário) e ele roda no navegador de quem lê a página — roubando cookie de sessão. <strong>Defesa</strong>: escapar a saída no HTML, usar <code>Content-Security-Policy</code> (CSP) para limitar de onde scripts podem vir, e marcar cookies com <code>HttpOnly</code> (JavaScript não lê).</p>
+
+<h3>CSRF (dentro de A01/A04)</h3>
+<p>Você está logado no banco; um site malicioso faz seu navegador disparar um pedido para o banco (transferir dinheiro) sem você saber — o navegador manda o cookie sozinho. <strong>Defesa</strong>: token CSRF único por sessão nos formulários e ações, e verificar o header <code>Origin</code>/<code>Referer</code>.</p>
+
+<hr>
+
+<h2>A mentalidade que evita quase tudo</h2>
+<ul>
+  <li><strong>Nunca confie no cliente</strong>: valide e saneie TUDO no servidor (campos, headers, cookies, arquivos) — o navegador pode ser alterado, o <code>curl</code> manda o que quiser;</li>
+  <li><strong>Mínimo privilégio</strong>: o banco de dados da aplicação não deve ser root; cada serviço, sua permissão;</li>
+  <li><strong>Erros genéricos para o usuário</strong>: um erro de banco não pode mostrar a consulta SQL nem o caminho do arquivo (isso ajuda o atacante);</li>
+  <li><strong>Mantenha tudo atualizado</strong> e remova páginas de teste/padrão;</li>
+  <li><strong>Teste você mesmo</strong>: aprenda no seu próprio lab (OWASP Juice Shop, DVWA) e faça pentest com autorização.</li>
+</ul>
+
+<div class="try" data-goal="HTTP/1.1 404 Not Found" data-solucao="curl -i http://exemplo.com/nao-existe">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i http://exemplo.com/nao-existe</code> e veja o <code>HTTP/1.1 404 Not Found</code> com corpo genérico — assim é um erro seguro: não vaza caminho de arquivo, consulta SQL nem versão interna. Compare com <code>curl -i https://api.exemplo.com/usuarios/999</code> (o <code>404</code> da API também é genérico: <code>{"erro":"usuário não encontrado"}</code>).</p>
+</div>
+
+<div class="warning">
+<strong>Segurança é processo, não ferramenta</strong>
+<p>Não existe "site 100% seguro". Existe: código revisado, dependências atualizadas, HTTPS com HSTS, firewall, logs, backup testado e um plano para quando (não se) algo der errado. A OWASP Top 10 muda a cada poucos anos — acompanhe em <code>owasp.org</code>.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>OWASP Top 10 (2021): A01 acesso quebrado, A02 criptografia, A03 injeção (SQLi/XSS), A04 design inseguro, A05 má configuração, A06 componentes vulneráveis, A07 autenticação, A08 integridade, A09 logs, A10 SSRF.</li>
+  <li>Defesas recorrentes: validar tudo no servidor, consultas parametrizadas, CSP + cookies HttpOnly, HTTPS+HSTS, 2FA, atualizações constantes, erros genéricos, logs.</li>
+  <li>Nunca confie no que vem do usuário — e pratique em labs próprios (Juice Shop, DVWA, HackTheBox).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="projetos.html">Como usar os projetos</a> — hora de mão na massa: sair do simulador e testar de verdade com <code>curl</code>, <code>dig</code> e <code>ping</code> no seu computador.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

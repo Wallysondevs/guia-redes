@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Máscara de sub-rede e CIDR (/24, /16, /30): quantos IPs cabem | Guia Redes</title>
+<meta name="description" content="O que é a máscara de sub-rede (255.255.255.0 = /24) e como calcular quantos endereços cabem em cada prefixo CIDR: /24 = 254 hosts, /16 = 65.534, /30 = 2. Exemplo passo a passo com a rede da Ana (192.168.1.0/24, broadcast 192.168.1.255), tabela de prefixos comuns, como ver a máscara com ip addr e route -n, e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Máscara de sub-rede: o que é <span class="hl">/24</span>?</h1>
+
+<p class="intro">A máscara de sub-rede é a régua que separa o endereço em duas partes: <strong>qual parte identifica a rede (o prédio)</strong> e <strong>qual parte identifica o computador dentro dela (o apartamento)</strong>. Pense numa rua com 256 casas numeradas de 0 a 255: o número da rua é a parte de rede, o número da casa é a parte do host. O <code>/24</code> diz exatamente onde essa divisão acontece.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que significam <code>255.255.255.0</code> e a notação CIDR <code>/24</code>.</li>
+  <li>A calcular quantos hosts cabem num prefixo: 2^(32−n) − 2 (tirando rede e broadcast).</li>
+  <li>Os endereços especiais de cada sub-rede: <strong>endereço de rede</strong> e <strong>broadcast</strong>.</li>
+  <li>A tabela dos prefixos mais usados (/8, /16, /24, /25, /26… /30).</li>
+  <li>Como ver a máscara da sua rede com <code>ip addr</code> e <code>route -n</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>De binário para a notação /n</h2>
+<p>Uma máscara como <code>255.255.255.0</code> em binário é <code>11111111.11111111.11111111.00000000</code> — uma fileira de <strong>24 uns</strong> seguida de 8 zeros. O CIDR simplesmente conta os uns: <code>255.255.255.0 = /24</code>. Quanto mais uns, <strong>menor a rede</strong> e mais bits sobram para os hosts? Não — o contrário: <strong>quanto maior o /n, menor a rede</strong> (mais bits de rede, menos de host).</p>
+<dl class="anatomy">
+  <dt>192.168.1.50</dt><dd>O endereço IP da máquina (32 bits).</dd>
+  <dt>/24</dt><dd>O prefixo: os primeiros 24 bits são a rede; os últimos 8 bits são o host.</dd>
+  <dt>255.255.255.0</dt><dd>A mesma coisa escrita em máscara: 24 uns + 8 zeros.</dd>
+</dl>
+
+<hr>
+
+<h2>Calculando a rede da Ana: 192.168.1.0/24</h2>
+<p>Com <code>/24</code>, sobram <strong>8 bits para o host</strong>: 2⁸ = <strong>256 endereços</strong>. Dois deles são reservados:</p>
+<ul>
+  <li><code>192.168.1.0</code> — o <strong>endereço de rede</strong> (identifica a rede inteira; ninguém usa como máquina).</li>
+  <li><code>192.168.1.255</code> — o <strong>endereço de broadcast</strong> (fala com <em>todas</em> as máquinas da rede de uma vez, ex.: o ARP da aula <a href="arp.html">ARP</a>).</li>
+</ul>
+<p>Sobram <strong>256 − 2 = 254 hosts utilizáveis</strong>: de <code>192.168.1.1</code> até <code>192.168.1.254</code>. Na rede da Ana, o <code>.1</code> é o roteador (gateway) e o <code>.50</code> é o notebook dela.</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Elemento</th><th>Valor em 192.168.1.0/24</th><th>Por quê</th></tr>
+<tr><td>Endereço de rede</td><td><code>192.168.1.0</code></td><td>Host com todos os bits 0</td></tr>
+<tr><td>Primeiro host utilizável</td><td><code>192.168.1.1</code></td><td>Normalmente o gateway/roteador</td></tr>
+<tr><td>Notebook da Ana</td><td><code>192.168.1.50</code></td><td>Um host qualquer do meio da faixa</td></tr>
+<tr><td>Último host utilizável</td><td><code>192.168.1.254</code></td><td>Antes do broadcast</td></tr>
+<tr><td>Broadcast</td><td><code>192.168.1.255</code></td><td>Host com todos os bits 1</td></tr>
+<tr><td>Máscara</td><td><code>255.255.255.0</code> (= /24)</td><td>24 bits de rede + 8 de host</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Tabela dos prefixos mais comuns</h2>
+<p>A fórmula geral: <strong>endereços = 2^(32−n)</strong> e <strong>hosts utilizáveis = 2^(32−n) − 2</strong>.</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Prefixo</th><th>Máscara</th><th>Endereços</th><th>Hosts utilizáveis</th><th>Uso típico</th></tr>
+<tr><td>/8</td><td>255.0.0.0</td><td>16.777.216</td><td>16.777.214</td><td>Redes internas gigantes (10.0.0.0/8)</td></tr>
+<tr><td>/16</td><td>255.255.0.0</td><td>65.536</td><td>65.534</td><td>Campus, empresas grandes (172.16.0.0/12)</td></tr>
+<tr><td>/24</td><td>255.255.255.0</td><td>256</td><td>254</td><td><strong>Casa e escritório pequeno</strong> (192.168.1.0/24)</td></tr>
+<tr><td>/25</td><td>255.255.255.128</td><td>128</td><td>126</td><td>Metade de um /24 (divide a rede em 2)</td></tr>
+<tr><td>/26</td><td>255.255.255.192</td><td>64</td><td>62</td><td>4 sub-redes dentro de um /24</td></tr>
+<tr><td>/27</td><td>255.255.255.224</td><td>32</td><td>30</td><td>8 sub-redes dentro de um /24</td></tr>
+<tr><td>/28</td><td>255.255.255.240</td><td>16</td><td>14</td><td>16 sub-redes dentro de um /24</td></tr>
+<tr><td>/29</td><td>255.255.255.248</td><td>8</td><td>6</td><td>Pequenos blocos (ex.: VPNs)</td></tr>
+<tr><td>/30</td><td>255.255.255.252</td><td>4</td><td><strong>2</strong></td><td>Enlace ponto a ponto entre dois roteadores</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Exemplo de cálculo passo a passo: /26</h2>
+<p>Se a rede da Ana fosse <code>192.168.1.0/26</code>:</p>
+<ul>
+  <li>Bits de host: 32 − 26 = <strong>6 bits</strong> → 2⁶ = <strong>64 endereços</strong>.</li>
+  <li>Hosts utilizáveis: 64 − 2 = <strong>62</strong> (de <code>192.168.1.1</code> a <code>192.168.1.62</code>).</li>
+  <li>Rede: <code>192.168.1.0</code>; broadcast: <code>192.168.1.63</code>.</li>
+  <li>E um /24 inteiro comporta 256 ÷ 64 = <strong>4 sub-redes /26</strong>: .0–.63, .64–.127, .128–.191, .192–.255.</li>
+</ul>
+<p>É assim que se "corta" uma rede grande em pedaços menores (sub-redes) sem desperdiçar IPs — cada andar do prédio vira uma sub-rede.</p>
+
+<hr>
+
+<h2>Como ver a máscara no seu computador</h2>
+<pre class="term">$ ip addr
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP
+    link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.50/24 scope global eth0      « o /24 é o prefixo CIDR</pre>
+<pre class="term">$ route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+default         192.168.1.1     0.0.0.0         UG    100    0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     100    0        0 eth0   « Genmask = a máscara da rede local</pre>
+<p>O <code>ip addr</code> mostra o formato moderno (<code>/24</code>); o <code>route -n</code> mostra o formato antigo (<code>Genmask 255.255.255.0</code>). São a mesma coisa.</p>
+
+<div class="try" data-goal="192.168.1.50/24" data-solucao="ip addr">
+<p class="try-task"><strong>Missão:</strong> rode <code>ip addr</code> e confirme que o notebook da Ana está em <code>192.168.1.50/24</code>.</p>
+</div>
+
+<div class="try" data-goal="255.255.255.0" data-solucao="route -n">
+<p class="try-task"><strong>Missão:</strong> rode <code>route -n</code> e ache a coluna <code>Genmask</code> com <code>255.255.255.0</code> — a máscara da rede 192.168.1.0/24.</p>
+</div>
+
+<div class="warning">
+<strong>Cuidado ao mudar a máscara</strong>
+<p>Se o notebook da Ana fosse configurado como <code>192.168.1.50/25</code> (máscara 255.255.255.128), a rede seria outra: de <code>192.168.1.0</code> a <code>192.168.1.127</code>. Um vizinho em <code>192.168.1.200</code> ficaria <em>fora</em> da sub-rede dela — e a comunicação pararia mesmo os dois estando no mesmo Wi-Fi. Máscara errada = "rede invisível".</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Máscara <code>255.255.255.0</code> = <code>/24</code>: 24 bits de rede + 8 de host.</li>
+  <li>Fórmula: endereços = 2^(32−n); hosts utilizáveis = 2^(32−n) − 2 (rede e broadcast não contam).</li>
+  <li>Em 192.168.1.0/24: rede = .0, hosts de .1 a .254, broadcast = .255.</li>
+  <li>Veja com <code>ip addr</code> (formato /24) e <code>route -n</code> (coluna Genmask).</li>
+</ul>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Quantos hosts utilizáveis cabem numa sub-rede /24?</p>
+<label><input type="radio" name="q1"> 256</label>
+<label><input type="radio" name="q1"> 254</label>
+<label><input type="radio" name="q1"> 255</label>
+<label><input type="radio" name="q1"> 128</label>
+</div>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">Em <code>192.168.1.0/24</code>, qual destes endereços é o broadcast (fala com todos da rede)?</p>
+<label><input type="radio" name="q2"> 192.168.1.0</label>
+<label><input type="radio" name="q2"> 192.168.1.1</label>
+<label><input type="radio" name="q2"> 192.168.1.254</label>
+<label><input type="radio" name="q2"> 192.168.1.255</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="ips-privados.html">IPs privados (192.168…, 10…, 172.16…) e públicos</a> — por que o 192.168.1.50 só existe dentro da rede da Ana e não na internet.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

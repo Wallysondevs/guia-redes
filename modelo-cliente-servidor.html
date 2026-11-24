@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelo cliente-servidor — a dupla de toda requisição | Guia Redes</title>
+<meta name="description" content="O modelo cliente-servidor explicado com a analogia do restaurante: o cliente faz o pedido (requisição), o servidor prepara e devolve a resposta. O que é um cliente (navegador, curl, app), o que é um servidor (máquina que escuta numa porta), por que toda conversa na internet tem um lado pedindo e outro respondendo, e o primeiro curl no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Modelo <span class="hl">cliente-servidor</span>: a dupla de toda requisição</h1>
+
+<p class="intro">Nada na internet acontece "sozinho": toda conversa na rede tem sempre <strong>dois lados</strong> — um que <strong>pede</strong> (o <em>cliente</em>) e um que <strong>responde</strong> (o <em>servidor</em>). Quando você abre um site, o seu navegador é o cliente e o site é o servidor. Nesta aula, a analogia do restaurante deixa isso obvious.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é um <strong>cliente</strong>: navegador, <code>curl</code>, app de celular — qualquer programa que <em>inicia</em> o pedido.</li>
+  <li>O que é um <strong>servidor</strong>: um programa que fica <em>esperando</em> pedidos numa porta (ex.: 80, 443) e responde.</li>
+  <li>A analogia do restaurante: pedido no cardápio = requisição, prato pronto = resposta.</li>
+  <li>Que cliente e servidor são <strong>papéis</strong>, não máquinas fixas: seu notebook pode ser servidor também.</li>
+  <li>Seu primeiro <code>curl</code> no simulador: pedir uma página para um servidor.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia do restaurante</h2>
+<p>Imagine um restaurante:</p>
+<ul>
+  <li><strong>Você (cliente)</strong> olha o cardápio e faz um pedido: "quero o prato 12, por favor" — essa frase é a <strong>requisição</strong> (em rede: <code>GET /pratos/12 HTTP/1.1</code>).</li>
+  <li><strong>A cozinha (servidor)</strong> está o dia inteiro esperando pedidos. Ela recebe o seu, prepara e devolve o prato — essa é a <strong>resposta</strong> (em rede: <code>HTTP/1.1 200 OK</code> + a página).</li>
+  <li>Se você pedir um prato que não existe, a cozinha responde "não temos" — em rede é o erro <code>404 Not Found</code>.</li>
+  <li>Se a cozinha está fechada, ninguém atende — em rede é "connection refused" (conexão recusada).</li>
+</ul>
+<p>Toda requisição na internet funciona assim: <strong>cliente pede, servidor responde</strong>. Até um WhatsApp: seu app (cliente) pede a mensagem ao servidor do WhatsApp, que responde com a mensagem.</p>
+
+<hr>
+
+<h2>Quem é o cliente e quem é o servidor</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>Cliente</th><th>Servidor</th></tr>
+<tr><td><strong>O que faz</strong></td><td>Inicia a conversa: faz o pedido</td><td>Espera parado numa porta e responde aos pedidos</td></tr>
+<tr><td><strong>Exemplos</strong></td><td>Navegador (Chrome, Firefox), <code>curl</code>, <code>wget</code>, app de celular, <code>ping</code></td><td>Site (nginx, Apache), API, servidor de e-mail, servidor SSH (<code>sshd</code>)</td></tr>
+<tr><td><strong>Quando usa</strong></td><td>Sempre que você "vai até" alguém</td><td>24 horas por dia, ligado e escutando</td></tr>
+<tr><td><strong>Endereço</strong></td><td>Qualquer IP (o seu: 192.168.1.50)</td><td>Um IP + uma porta (ex.: 93.184.216.34 na porta 443)</td></tr>
+</table>
+</div>
+
+<div class="warning">
+<strong>Cliente e servidor são papéis, não máquinas.</strong>
+<p>O seu <code>notebook</code> hoje é cliente quando você abre um site — mas ele também pode ser <strong>servidor</strong>: a Ana roda um servidorzinho de páginas nele (<code>python3 http.server</code> na porta 8000, que você vai ver com <code>ss -tlnp</code>). Um mesmo computador pode ser os dois ao mesmo tempo.</p>
+</div>
+
+<hr>
+
+<h2>A conversa na prática: um pedido de página</h2>
+<p>Quando o navegador da Ana abre <code>exemplo.com</code>, a conversa é mais ou menos esta (simplificada):</p>
+<dl class="anatomy">
+  <dt>Cliente →</dt><dd>"GET / HTTP/1.1" — quero a página inicial</dd>
+  <dt>Cliente →</dt><dd>"Host: exemplo.com" — deste site, por favor</dd>
+  <dt>Servidor →</dt><dd>"HTTP/1.1 200 OK" — achei, segue a página</dd>
+  <dt>Servidor →</dt><dd>Cabeçalhos (tipo de conteúdo, tamanho…) + o HTML da página</dd>
+</dl>
+<p>Com o <code>curl</code> dá para ver essa conversa inteira pela linha de comando. O <code>-i</code> mostra os <strong>cabeçalhos</strong> da resposta junto com o corpo:</p>
+<pre class="term">$ curl -i exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1256
+Connection: keep-alive
+
+&lt;html&gt;&lt;head&gt;&lt;title&gt;Exemplo&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Exemplo.com&lt;/h1&gt;…&lt;/body&gt;&lt;/html&gt;</pre>
+
+<div class="try" data-goal="200 OK" data-solucao="curl -i exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i exemplo.com</code> e aperte <kbd>Enter</kbd>. Você está fazendo o papel de cliente: pedindo a página para o servidor e vendo a resposta <code>200 OK</code> com os cabeçalhos.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Toda conversa na rede é <strong>cliente-servidor</strong>: um lado pede (requisição), o outro responde (resposta).</li>
+  <li>Cliente = navegador, <code>curl</code>, app. Servidor = programa escutando numa porta (80/443 para sites).</li>
+  <li>Os papéis são flexíveis: seu próprio computador pode ser servidor (a Ana roda um na porta 8000).</li>
+  <li><code>curl -i exemplo.com</code> mostra a conversa inteira: status <code>200 OK</code>, cabeçalhos e o corpo da página.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="o-que-e-ip.html">Endereço IP: o "CEP" do computador</a> — como o pedido encontra o caminho certo até o servidor.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

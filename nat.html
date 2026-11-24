@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NAT: vários computadores saem com um único IP público (ramal de empresa) | Guia Redes</title>
+<meta name="description" content="Como o NAT (Network Address Translation) faz vários computadores com IPs privados (192.168.1.x) acessarem a internet usando um único IP público — a analogia do ramal de empresa e do porteiro. Tipos de NAT (estático, dinâmico, PAT/sobrecarga de portas), a tabela de tradução de endereços, por que ele existe (esgotamento do IPv4) e o que é port forwarding. Missões no simulador com curl, traceroute e ip addr.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>NAT: vários PCs, <span class="hl">um IP público</span></h1>
+
+<p class="intro">Pense numa empresa: ela tem <strong>um único número de telefone público</strong> na fachada, mas cada funcionário tem um <strong>ramal interno</strong> (101, 102, 103…). Quem liga de fora fala só com o número público; o <strong>porteiro</strong> anota "a ligação entrou pelo ramal 102" e, quando a resposta chega, entrega para o ramal certo. O <strong>NAT</strong> (Network Address Translation) é exatamente esse porteiro: ele deixa vários computadores de IPs privados saírem para a internet usando <strong>um único IP público</strong>.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que o NAT troca nos pacotes: IP de origem privado → IP público do roteador.</li>
+  <li>A tabela de tradução e a sobrecarga de portas (<strong>PAT/NAPT</strong>) — como ele sabe de quem era a resposta.</li>
+  <li>Os tipos de NAT: estático (1:1), dinâmico (pool) e por portas (o mais comum em casa).</li>
+  <li>Por que o NAT existe: o IPv4 tem só ~4,3 bilhões de endereços.</li>
+  <li>O que é <strong>port forwarding</strong> (abrir uma porta para um servidor interno).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O passo a passo de um pacote com NAT</h2>
+<p>Na rede da Ana, o notebook (<code>192.168.1.50</code>) abre <code>exemplo.com</code> (<code>93.184.216.34</code>). O roteador (<code>192.168.1.1</code>, que tem o IP público <code>200.100.50.10</code> na internet) faz a tradução:</p>
+<dl class="anatomy">
+  <dt>Saída (dentro da rede)</dt><dd>Origem: <code>192.168.1.50:54321</code> → Destino: <code>93.184.216.34:80</code>. O pacote vai até o roteador (é o <a href="gateway-padrao.html">gateway padrão</a>).</dd>
+  <dt>NAT no roteador</dt><dd>O roteador troca a origem para <code>200.100.50.10:40123</code> e <strong>anota na tabela</strong>: "192.168.1.50:54321 corresponde a 200.100.50.10:40123".</dd>
+  <dt>Saída (na internet)</dt><dd>Origem: <code>200.100.50.10:40123</code> → Destino: <code>93.184.216.34:80</code>. Para o servidor, quem pediu a página foi o IP público.</dd>
+  <dt>Resposta</dt><dd>O servidor responde para <code>200.100.50.10:40123</code>; o roteador consulta a tabela e reescreve o destino para <code>192.168.1.50:54321</code> e entrega ao notebook.</dd>
+</dl>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Dentro da rede (antes do NAT)</th><th>Na internet (depois do NAT)</th></tr>
+<tr><td><code>192.168.1.50:54321 → 93.184.216.34:80</code></td><td><code>200.100.50.10:40123 → 93.184.216.34:80</code></td></tr>
+<tr><td><code>192.168.1.60:51000 → 142.250.72.142:443</code></td><td><code>200.100.50.10:40124 → 142.250.72.142:443</code></td></tr>
+</table>
+</div>
+<p>Como dá para ter vários computadores usando o mesmo IP público ao mesmo tempo? Graças às <strong>portas</strong>: cada conexão nova ganha uma porta pública diferente (40123, 40124…). Esse truque se chama <strong>PAT</strong> (Port Address Translation), ou NAT com sobrecarga — o tipo que todo roteador doméstico usa.</p>
+
+<hr>
+
+<h2>Tipos de NAT</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo</th><th>Como funciona</th><th>Exemplo</th></tr>
+<tr><td><strong>Estático (1:1)</strong></td><td>Um IP privado equivale sempre ao mesmo IP público</td><td>Servidor interno que precisa de IP público fixo</td></tr>
+<tr><td><strong>Dinâmico (pool)</strong></td><td>O roteador tira IPs públicos de um conjunto (pool) e empresta conforme a demanda</td><td>Provedor entrega um bloco de IPs para vários clientes</td></tr>
+<tr><td><strong>PAT / NAPT (sobrecarga de portas)</strong></td><td>Muitos privados saem pelo <em>mesmo</em> IP público, diferenciados pela porta</td><td><strong>Todo roteador Wi-Fi doméstico</strong> — a sua casa inteira sai pelo mesmo IP</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Por que o NAT foi inventado</h2>
+<p>O IPv4 tem 2³² = ~4,3 bilhões de endereços — e a internet já tem muito mais dispositivos que isso (celulares, TVs, geladeiras…). Como não dá para dar um IP público para cada um, o NAT permite que <strong>bilhões de IPs privados</strong> (192.168.x.x, 10.x.x.x — <a href="ips-privados.html">lembra?</a>) compartilhem poucos IPs públicos. Sem NAT, os endereços IPv4 teriam acabado bem antes.</p>
+
+<hr>
+
+<h2>Veja na máquina da Ana</h2>
+<p>O notebook dela tem IP privado; a conversa com a internet acontece "por trás" do roteador com NAT:</p>
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1256
+Connection: keep-alive</pre>
+<p>Para o servidor do exemplo.com, quem fez essa requisição foi o IP público do roteador da Ana — o servidor nem desconfia que existe um 192.168.1.50 por trás. E o primeiro salto de qualquer rota para fora é sempre o roteador:</p>
+<pre class="term">$ traceroute exemplo.com
+traceroute to exemplo.com (93.184.216.34), 30 hops max, 60 byte packets
+ 1  192.168.1.1         2.431 ms  3.105 ms  2.887 ms   « o roteador com NAT: 1º salto</pre>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i http://exemplo.com</code> e veja o <code>HTTP/1.1 200 OK</code> chegando — do ponto de vista do servidor, veio do IP público do roteador (NAT), não do 192.168.1.50.</p>
+</div>
+
+<div class="try" data-goal="traceroute to" data-solucao="traceroute exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>traceroute exemplo.com</code> e repare que o <strong>primeiro salto é sempre o 192.168.1.1</strong> — é ele quem faz o NAT e manda o pacote para a internet.</p>
+</div>
+
+<div class="warning">
+<strong>NAT não é firewall — e "meu IP" é o do roteador</strong>
+<p>O NAT esconde os IPs internos, mas não bloqueia portas por conta própria; a proteção vem do firewall (que geralmente anda junto no roteador). E quando você entra num site de "qual é o meu IP", o endereço mostrado é o <strong>público do roteador</strong> (200.100.50.10), não o 192.168.1.50 do notebook. Para expor um servidor interno na internet, configura-se o <strong>port forwarding</strong> no roteador: "pacotes na porta pública 8080 vão para o 192.168.1.60:80".</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>NAT troca o IP de origem privado pelo IP público do roteador na saída, e faz o caminho inverso na resposta.</li>
+  <li>PAT (sobrecarga de portas) permite muitos privados no mesmo IP público, diferenciados pela porta de origem.</li>
+  <li>Tipos: estático (1:1), dinâmico (pool) e PAT (o de casa).</li>
+  <li>O NAT economiza IPs públicos — essencial num mundo com mais dispositivos que endereços IPv4.</li>
+  <li>Quem faz NAT em casa é o roteador (gateway 192.168.1.1) — primeiro salto do traceroute.</li>
+</ul>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Numa rede doméstica, quem faz o NAT?</p>
+<label><input type="radio" name="q1"> O servidor do site que você acessa</label>
+<label><input type="radio" name="q1"> O roteador (gateway), que troca os IPs privados pelo IP público dele</label>
+<label><input type="radio" name="q1"> O navegador</label>
+<label><input type="radio" name="q1"> O cabo de rede</label>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Como o roteador sabe para qual computador interno entregar a resposta quando vários usam o mesmo IP público?</p>
+<label><input type="radio" name="q2"> Pelo endereço MAC de cada um</label>
+<label><input type="radio" name="q2"> Pelo nome do computador</label>
+<label><input type="radio" name="q2"> Pelas portas: cada conexão é anotada na tabela de NAT (PAT)</label>
+<label><input type="radio" name="q2"> Ele chuta e vê se deu certo</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="dhcp.html">DHCP: pegar IP automático</a> — de onde vem o 192.168.1.50 que o roteador NAT distribui para os dispositivos da casa.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

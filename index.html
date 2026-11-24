@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia Redes — aprenda TCP/IP, DNS, HTTP e internet do zero, como numa escola | Guia Redes</title>
+<meta name="description" content="Curso de redes do zero: o que é IP e porta, DNS, HTTP/HTTPS, TCP vs UDP, sub-redes, NAT, traceroute, curl, ping, dig, ss — com terminal simulado no navegador, missões e exemplos reais. Do modelo cliente-servidor até firewall, CDN e HTTP/3.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="hero">
+<h1>Guia Redes 🌐</h1>
+<p>Aprenda <strong>como a internet funciona de verdade</strong>, do zero, como numa escola: IP, portas, DNS, HTTP, TCP, rotas — cada conceito explicado com analogia do dia a dia e praticado num terminal simulado aqui mesmo na página. Do "o que é um IP?" até firewall, CDN e HTTP/3.</p>
+<a class="btn btn-lg" href="introducao.html">Comece pelo Nível 1 &#10095;</a>
+</div>
+
+<div class="pager"></div>
+
+<h2>Experimente agora</h2>
+<p>A caixa abaixo é um <strong>terminal de rede simulado</strong>: a máquina fictícia <strong>ana@notebook</strong> está ligada numa rede 192.168.1.0/24 com gateway 192.168.1.1. Nada do que você digitar sai do seu navegador. Clique na janela escura, digite <code>ping exemplo.com</code> e aperte <kbd>Enter</kbd>.</p>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping exemplo.com</code> e aperte <kbd>Enter</kbd>. Depois experimente <code>dig exemplo.com +short</code>, <code>curl -i https://exemplo.com</code> e <code>ss -tlnp</code>.</p>
+</div>
+
+<pre class="term">$ ping exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+
+--- exemplo.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss</pre>
+
+<hr>
+
+<h2>O que é este guia</h2>
+<p>Toda vez que você abre um site, uma <strong>conversa em rede</strong> acontece em milissegundos: seu computador vira um <strong>pacote</strong>, encontra o <strong>endereço IP</strong> do servidor pelo <strong>DNS</strong>, negocia uma <strong>conexão TCP</strong> e troca mensagens <strong>HTTP</strong> (ou HTTPS criptografado). Quem entende redes consegue diagnosticar "o site não abre", escolher portas, ler erros e falar com APIs.</p>
+<ul>
+  <li>Diagnosticar problemas: <code>ping</code>, <code>dig</code>, <code>traceroute</code>, <code>curl -v</code>, <code>ss</code>;</li>
+  <li>Entender IP, máscara, gateway, NAT e DHCP da sua própria rede;</li>
+  <li>Falar HTTP de verdade: métodos, headers, status, cookies e TLS;</li>
+  <li>Avançado: OSI/TCP-IP, BGP, VPN, firewall, CDN, HTTP/2 e HTTP/3.</li>
+</ul>
+
+<hr>
+
+<h2>Anatomia de uma URL</h2>
+<dl class="anatomy">
+  <dt>https://</dt><dd>O protocolo: HTTPS = HTTP + criptografia TLS.</dd>
+  <dt>exemplo.com</dt><dd>O domínio: um nome que o DNS traduz para um IP.</dd>
+  <dt>/caminho</dt><dd>O recurso pedido dentro do servidor.</dd>
+  <dt>:443</dt><dd>A porta (opcional na URL; 443 é a padrão do HTTPS).</dd>
+</dl>
+
+<hr>
+
+<h2>Escolha sua trilha</h2>
+<div class="trilhas">
+  <div class="trilha n1">
+    <h3>Nível 1 · Iniciante</h3>
+    <p>Cliente-servidor, IP, portas, URL, DNS, HTTP e seus primeiros comandos: <code>ping</code>, <code>curl</code>, <code>dig</code>, <code>ip</code>, <code>ss</code>.</p>
+    <a class="btn" href="introducao.html">Começar &#10095;</a>
+  </div>
+  <div class="trilha n2">
+    <h3>Nível 2 · Intermediário</h3>
+    <p>TCP vs UDP, sub-redes e CIDR, NAT, DHCP, traceroute, HTTP a fundo (métodos, headers, status), cookies, HTTPS e DNS a fundo.</p>
+    <a class="btn" href="classes-ipv4.html">Ver intermediário &#10095;</a>
+  </div>
+  <div class="trilha n3">
+    <h3>Nível 3 · Avançado</h3>
+    <p>Modelos OSI/TCP-IP, encapsulamento, BGP, VPN, firewall, CDN, load balancer, WebSockets, HTTP/2, HTTP/3 e segurança de rede.</p>
+    <a class="btn" href="modelo-osi.html">Ver avançado &#10095;</a>
+  </div>
+</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

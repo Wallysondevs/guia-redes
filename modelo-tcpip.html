@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelo TCP/IP: as 4 camadas que mandam de verdade | Guia Redes</title>
+<meta name="description" content="O modelo TCP/IP (4 camadas) explicado e comparado com o OSI (7 camadas): aplicação, transporte, internet e acesso à rede. Tabela comparativa OSI × TCP/IP, quais protocolos moram em cada camada e por que a internet real usa TCP/IP. Missão com curl HTTPS no simulador mostrando as camadas em ação.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O modelo <span class="hl">TCP/IP</span>: as 4 camadas que mandam de verdade</h1>
+
+<p class="intro">Se o OSI é o manual teórico completo (viagem internacional com alfândega e tudo), o <strong>TCP/IP</strong> é o modelo prático da internet: a mesma ideia de camadas, mas em <strong>4 camadas</strong>, batizado com o nome dos dois protocolos mais famosos dele — o <strong>TCP</strong> e o <strong>IP</strong>. Toda vez que você abre um site, é o TCP/IP que está funcionando.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>As <strong>4 camadas do TCP/IP</strong>: Acesso à rede, Internet, Transporte e Aplicação;</li>
+  <li>A <strong>tabela comparativa OSI (7) × TCP/IP (4)</strong> — quem cobre quem;</li>
+  <li>Por que o modelo TCP/IP "venceu" na internet real;</li>
+  <li>Ver as 4 camadas em ação num único comando <code>curl</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>As 4 camadas do TCP/IP</h2>
+<p>Analogia: mandar um <strong>pacote pelos correios da sua própria cidade</strong>. Você não precisa de alfândega nem de sessão formal — só precisa (1) colocar no caminhão certo, (2) etiquetar com o endereço, (3) mandar com recibo, (4) escrever o conteúdo.</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Camada TCP/IP</th><th>Função</th><th>Protocolos / exemplos</th></tr>
+<tr><td><strong>4 · Aplicação</strong></td><td>O que o usuário vê e usa: páginas web, e-mail, DNS, SSH.</td><td>HTTP/HTTPS, DNS, SMTP, SSH, FTP, WebSocket</td></tr>
+<tr><td><strong>3 · Transporte</strong></td><td>Entrega fim a fim entre as duas máquinas, com ou sem recibo.</td><td>TCP, UDP, portas</td></tr>
+<tr><td><strong>2 · Internet</strong></td><td>Endereçamento lógico e roteamento entre redes diferentes.</td><td>IP (IPv4/IPv6), ICMP, BGP, NAT</td></tr>
+<tr><td><strong>1 · Acesso à rede</strong> (enlace)</td><td>Entrega no trecho local: cabos, Wi-Fi, placas, MAC.</td><td>Ethernet, Wi-Fi (802.11), ARP, PPP</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Tabela comparativa: OSI (7 camadas) × TCP/IP (4 camadas)</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>OSI</th><th>TCP/IP</th><th>O que acontece ali</th></tr>
+<tr><td>7 · Aplicação</td><td rowspan="3"><strong>Aplicação</strong></td><td rowspan="3">HTTP, DNS, e-mail… tudo que o programa do usuário "fala".</td></tr>
+<tr><td>6 · Apresentação</td></tr>
+<tr><td>5 · Sessão</td></tr>
+<tr><td>4 · Transporte</td><td><strong>Transporte</strong></td><td>TCP/UDP e as portas: entrega fim a fim.</td></tr>
+<tr><td>3 · Rede</td><td><strong>Internet</strong></td><td>IP, roteamento, ICMP, BGP: o pacote encontra o caminho.</td></tr>
+<tr><td>2 · Enlace</td><td rowspan="2"><strong>Acesso à rede</strong></td><td rowspan="2">Ethernet/Wi-Fi, MAC, ARP: entrega no trecho local.</td></tr>
+<tr><td>1 · Física</td></tr>
+</table>
+</div>
+
+<dl class="anatomy">
+  <dt>Por que o TCP/IP juntou as camadas?</dt><dd>Na prática, sessão/apresentação raramente são separadas da aplicação (o próprio HTTP cuida de formato e o TLS da criptografia), e física/enlace são o "hardware de rede". O modelo ficou mais enxuto — e mais próximo do que os protocolos realmente fazem.</dd>
+  <dt>Quem veio primeiro?</dt><dd>Curiosamente, o TCP/IP veio <strong>antes</strong> do OSI como protocolo real (anos 1970, ARPANET); o OSI foi a tentativa de padronizar depois (anos 1980). A internet nunca trocou o que funcionava.</dd>
+  <dt>E o OSI serve para quê?</dt><dd>Para <strong>ensinar e diagnosticar</strong>: quando alguém diz "problema na camada 4", todo mundo entende que é TCP/porta, não cabo.</dd>
+</dl>
+
+<hr>
+
+<h2>As 4 camadas em ação num único curl</h2>
+<p>Quando a Ana roda <code>curl -i https://exemplo.com</code> no <code>notebook</code>, as 4 camadas do TCP/IP trabalham na hora:</p>
+
+<pre class="term">$ curl -i https://exemplo.com
+HTTP/2 200
+server: nginx/1.25.3
+content-type: text/html; charset=UTF-8
+strict-transport-security: max-age=31536000
+
+&lt;html&gt;…&lt;/html&gt;</pre>
+
+<dl class="anatomy">
+  <dt>Aplicação (camada 4)</dt><dd>O HTTP/2 pedindo a página e lendo a resposta <code>200</code> — e o TLS protegendo a conversa.</dd>
+  <dt>Transporte (camada 3)</dt><dd>O TCP na porta <strong>443</strong>, garantindo a entrega de cada pedaço (aulas <a href="tcp-vs-udp.html">TCP vs UDP</a> e <a href="handshake-tcp.html">handshake</a>).</dd>
+  <dt>Internet (camada 2)</dt><dd>O IP: seu pacote sai de <code>192.168.1.50</code>, passa pelo gateway <code>192.168.1.1</code> e roteia até <code>93.184.216.34</code>.</dd>
+  <dt>Acesso à rede (camada 1)</dt><dd>Ethernet/Wi-Fi entregando o quadro até o roteador da sua casa, pelo MAC dele (aula <a href="arp.html">ARP</a>).</dd>
+</dl>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://exemplo.com</code> e veja <code>HTTP/2 200</code> no topo — repare que as 4 camadas do TCP/IP trabalharam nesse único comando. Compare com <code>curl -i http://exemplo.com</code> (HTTP/1.1, porta 80, sem TLS).</p>
+</div>
+
+<div class="warning">
+<strong>Modelo não é protocolo</strong>
+<p>O TCP/IP é o <em>modelo</em> (a arquitetura de 4 camadas). TCP e IP são <em>protocolos</em> que moram nele — existem outros protocolos nas mesmas camadas (UDP no transporte, ICMP/BGP na internet, ARP no acesso à rede). Não confunda o nome do modelo com os dois protocolos que batizaram ele.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>O modelo TCP/IP tem <strong>4 camadas</strong>: Acesso à rede, Internet, Transporte e Aplicação.</li>
+  <li>Ele junta as 7 do OSI: aplicação = 7+6+5; internet = rede (3); acesso à rede = enlace + física (2+1).</li>
+  <li>É o modelo que a internet usa de verdade — TCP e IP são os protocolos que dão nome a ele.</li>
+  <li>Um único <code>curl</code> faz as 4 camadas trabalharem: HTTP (aplicação), TCP/443 (transporte), IP/roteamento (internet) e Ethernet/Wi-Fi (acesso à rede).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="encapsulamento.html">Encapsulamento: pacote dentro de pacote</a> — como os dados vão sendo "embrulhados" por cada camada nesse caminho.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

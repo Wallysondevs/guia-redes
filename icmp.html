@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICMP: o protocolo por trás do ping e do traceroute | Guia Redes</title>
+<meta name="description" content="ICMP explicado com analogia de cartão-postal de controle: echo request/reply do ping, Time Exceeded do traceroute, Destination Unreachable. Tipos de mensagem ICMP, por que o ping não prova que o site está no ar, e o risco de bloqueio/abuso (flood ICMP). Missões com ping e traceroute no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">ICMP</span>: o protocolo por trás do ping e do traceroute</h1>
+
+<p class="intro">Nem todo pacote na internet leva dados de usuário. Às vezes a rede precisa mandar só um <strong>cartão-postal de controle</strong>: "você está aí?", "essa rua não existe", "acabou o tempo". Quem faz esse serviço é o <strong>ICMP</strong> (Internet Control Message Protocol) — o "zelador" da camada de internet (camada 3 do TCP/IP, a mesma do IP). O <code>ping</code> e o <code>traceroute</code> são, no fundo, ICMP.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o ICMP e por que ele <strong>não leva dados de aplicação</strong>;</li>
+  <li>Os tipos de mensagem que você vai encontrar: <strong>Echo (ping), Time Exceeded (traceroute), Destination Unreachable</strong>;</li>
+  <li>Como o ping funciona passo a passo (Echo Request → Echo Reply);</li>
+  <li>Como o traceroute usa o TTL para revelar cada roteador do caminho;</li>
+  <li>Por que "ping não responde" não significa "site fora do ar".</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O que é o ICMP</h2>
+<p>O IP é como o correio: ele entrega pacotes, mas não avisa se deu erro. O <strong>ICMP anda junto com o IP</strong> (é um protocolo da mesma camada, número 1 no campo "protocolo" do header IP) e existe para <strong>reportar erros e trocar mensagens de controle</strong>. Ele não cria conexão — cada mensagem ICMP vai dentro de um pacote IP comum.</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo ICMP</th><th>Nome</th><th>Para que serve</th><th>Comando que usa</th></tr>
+<tr><td>8</td><td>Echo Request</td><td>"Você está aí?"</td><td rowspan="2"><code>ping</code></td></tr>
+<tr><td>0</td><td>Echo Reply</td><td>"Estou!" (com o tempo de ida e volta)</td></tr>
+<tr><td>11</td><td>Time Exceeded</td><td>"O TTL acabou no meu roteador"</td><td><code>traceroute</code></td></tr>
+<tr><td>3</td><td>Destination Unreachable</td><td>"Não consegui entregar: rede/porta/host inacessível"</td><td>aparece em erros de rota</td></tr>
+<tr><td>5</td><td>Redirect</td><td>"Use outro gateway, esse é melhor"</td><td>roteadores avisando entre si</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Como o ping funciona</h2>
+<p>O <code>ping</code> manda um pacote ICMP do tipo <strong>Echo Request</strong> (tipo 8) para o destino. Se o destino estiver ligado e aceitando ICMP, ele responde com <strong>Echo Reply</strong> (tipo 0). O ping mede o tempo entre o envio e a resposta — o <code>time=23.4 ms</code>:</p>
+
+<pre class="term">$ ping exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+
+--- exemplo.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss</pre>
+
+<p>Cada linha <code>64 bytes from …</code> é um Echo Reply. O <code>icmp_seq</code> é o número do pacote (para saber se perdeu algum no caminho) e o <code>ttl=64</code> mostra quantos roteadores ainda restavam quando a resposta passou — dá para ter uma ideia da distância.</p>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>ping exemplo.com</code> e veja as respostas <code>64 bytes from …</code>. Experimente também <code>ping -c 2 192.168.1.1</code> (o gateway da rede da Ana, resposta em milissegundos bem menores).</p>
+</div>
+
+<hr>
+
+<h2>Como o traceroute funciona (o truque do TTL)</h2>
+<p>Lembra do <strong>TTL</strong> da aula de <a href="encapsulamento.html">encapsulamento</a>? Cada pacote IP nasce com um TTL e cada roteador desconta 1; se zerar, o roteador <strong>descarta o pacote e manda um ICMP Time Exceeded</strong> de volta. O <code>traceroute</code> usa isso como uma sonda: manda pacotes com TTL 1, depois 2, depois 3… e cada roteador do caminho se "denuncia" na resposta:</p>
+
+<pre class="term">$ traceroute exemplo.com
+traceroute to exemplo.com (93.184.216.34), 30 hops max, 60 byte packets
+ 1  192.168.1.1 (192.168.1.1)  2.145 ms  2.301 ms  2.112 ms
+ 2  189.50.10.1 (189.50.10.1)  8.532 ms  8.401 ms  8.610 ms
+ 3  200.147.67.142 (200.147.67.142)  15.220 ms  15.104 ms  15.388 ms
+ 4  93.184.216.34 (93.184.216.34)  23.410 ms  23.201 ms  23.577 ms</pre>
+
+<p>Cada linha é um <strong>salto (hop)</strong> — um roteador no caminho — com 3 medições de tempo. O primeiro salto (<code>192.168.1.1</code>) é o gateway da Ana; o último é o próprio destino. É assim que a aula <a href="como-pacotes-viajam.html">Como o pacote viaja</a> mostra o caminho na prática.</p>
+
+<div class="try" data-goal="traceroute to exemplo.com" data-solucao="traceroute exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>traceroute exemplo.com</code> e veja cada salto até o destino. Compare com <code>traceroute google.com</code> — caminhos diferentes, redes diferentes.</p>
+</div>
+
+<div class="warning">
+<strong>Ping que não responde ≠ site fora do ar</strong>
+<p>Muitos servidores e firewalls <strong>bloqueiam ICMP</strong> de propósito (para não serem descobertos por scans e para não gastar CPU com flood). Nesse caso o ping dá "timeout", mas o site abre normalmente no navegador — porque o site usa TCP/porta 443, não ICMP. Para testar se um <em>serviço</em> está no ar, teste a porta certa: <code>nc -zv exemplo.com 443</code> ou <code>curl -i https://exemplo.com</code>.</p>
+</div>
+
+<div class="warning">
+<strong>ICMP também é usado em ataques</strong>
+<p>Como o ICMP não tem autenticação, dá para mandar um <strong> flood de Echo Requests</strong> (ping flood) para sobrecarregar alguém — um tipo clássico de ataque de negação de serviço (aula <a href="ddos.html">DDoS</a>). Por isso muitos sites e operadoras <strong>limitam a taxa de ICMP</strong>: se você mandar 1000 pings por segundo, a maioria é descartada silenciosamente.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>ICMP é o protocolo de <strong>controle e erro</strong> da camada de internet — anda dentro de pacotes IP, sem conexão.</li>
+  <li><code>ping</code> = Echo Request (8) → Echo Reply (0), e mede o tempo de ida e volta.</li>
+  <li><code>traceroute</code> manda pacotes com TTL 1, 2, 3… e cada roteador responde Time Exceeded (11), revelando o caminho.</li>
+  <li>ICMP bloqueado não significa host desligado — teste a porta do serviço (<code>nc -zv</code>, <code>curl</code>).</li>
+  <li>ICMP pode ser abusado (ping flood) — por isso é comum limitar a taxa de respostas.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="bgp-intro.html">BGP: como a internet se conecta entre si</a> — como os roteadores dos provedores conversam para decidir por onde cada pacote vai.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

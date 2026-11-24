@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firewall: iptables/nftables básico | Guia Redes</title>
+<meta name="description" content="Firewall explicado com a analogia do porteiro de prédio: cadeias INPUT/OUTPUT/FORWARD, política padrão DROP, regras que casam em ordem. Comandos reais de iptables e nftables em exemplos (listar regras, liberar SSH/HTTP/HTTPS, bloquear entrada por padrão, NAT MASQUERADE, logar descartes), o perigo de trancar a porta 22 por SSH e como testar com segurança. Missão com ss no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Firewall</span>: iptables/nftables básico</h1>
+
+<p class="intro">Até aqui o pacote viajava livremente. Mas e se você quiser <strong>proibir</strong> certas entradas? A máquina precisa de um <strong>porteiro</strong>: isso é o <strong>firewall</strong>. No Linux, o porteiro clássico é o <code>iptables</code> (e o sucessor moderno, o <code>nftables</code>). Analogia: é a portaria de um prédio — só entra quem está na lista, pela porta certa, e tudo que não está permitido é barrado.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é um firewall de <strong>pacotes</strong> e onde ele fica (na própria máquina, camada 3/4);</li>
+  <li>As <strong>cadeias</strong> INPUT, OUTPUT, FORWARD e a política padrão (ACCEPT/DROP);</li>
+  <li>Comandos reais de <code>iptables</code> e <code>nft</code> para um servidor web;</li>
+  <li>A regra de ouro: <strong>a primeira regra que casa vale</strong> — ordem importa;</li>
+  <li>O perigo de editar firewall remoto por SSH (trancar a si mesmo para fora).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Como o firewall decide</h2>
+<p>Cada pacote que chega (ou sai) passa por uma <strong>cadeia de regras</strong>. O firewall lê as regras <strong>de cima para baixo</strong> e aplica a primeira que "casar" com o pacote; se nenhuma casar, vale a <strong>política padrão</strong> da cadeia. As cadeias principais:</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Cadeia</th><th>Quando o pacote passa por ela</th></tr>
+<tr><td><strong>INPUT</strong></td><td>Pacote <em>entrando</em> na máquina e destinado a ela mesma (ex.: alguém tentando seu SSH na porta 22).</td></tr>
+<tr><td><strong>OUTPUT</strong></td><td>Pacote <em>saindo</em> da máquina (ex.: seu <code>ping</code> ou <code>curl</code> para fora).</td></tr>
+<tr><td><strong>FORWARD</strong></td><td>Pacote que chega numa interface e vai sair por outra (a máquina servindo de roteador/NAT — aula <a href="nat.html">NAT</a>).</td></tr>
+</table>
+</div>
+
+<dl class="anatomy">
+  <dt>Regra</dt><dd>Um teste + uma ação: "se for TCP, porta 22, protocolo TCP → ACCEPT". O teste olha IP de origem, porta, protocolo, interface…</dd>
+  <dt>ACCEPT / DROP</dt><dd><strong>ACCEPT</strong> deixa passar; <strong>DROP</strong> descarta <em>silenciosamente</em> (o remetente nem fica sabendo — dá timeout). Existe também REJECT, que descarta mas avisa com ICMP (útil em testes, barulhento em produção).</dd>
+  <dt>Política padrão (policy)</dt><dd>Se nenhuma regra casar: <code>DROP</code> (seguro, "bloqueia por padrão") ou <code>ACCEPT</code> (permissivo). A boa prática é INPUT com política DROP e liberar só o necessário.</dd>
+</dl>
+
+<hr>
+
+<h2>iptables na prática (comandos reais)</h2>
+<p>Estes comandos rodam num Linux real (não no simulador — aqui vamos só visualizar). Primeiro, ver o que já existe:</p>
+
+<pre class="term">$ sudo iptables -L -v --line-numbers
+Chain INPUT (policy ACCEPT 0 packets, 0 bytes)
+num   pkts bytes target     prot opt in     out     source               destination
+1     …                              /* regras aqui */
+
+$ sudo iptables -L INPUT -n -v | head
+Chain INPUT (policy DROP 120 packets, 4800 bytes)   « política padrão: bloqueia o resto</pre>
+
+<p>Um conjunto básico e seguro para um servidor web (rode nessa ordem!):</p>
+
+<pre class="term">$ sudo iptables -P INPUT DROP          # política padrão: NINGUÉM entra
+$ sudo iptables -P FORWARD DROP        # e não roteia nada
+$ sudo iptables -P OUTPUT ACCEPT       # a máquina pode sair (senão trava tudo)
+$ sudo iptables -A INPUT -i lo -j ACCEPT              # loopback sempre livre
+$ sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+                                            # deixa voltar as respostas das conexões já abertas
+$ sudo iptables -A INPUT -p tcp --dport 22 -j ACCEPT   # SSH (a porta do porteiro!)
+$ sudo iptables -A INPUT -p tcp --dport 80 -j ACCEPT   # HTTP
+$ sudo iptables -A INPUT -p tcp --dport 443 -j ACCEPT  # HTTPS
+$ sudo iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT  # ping
+$ sudo iptables -A INPUT -j LOG --log-prefix "FIREWALL-DROP: "   # loga o que foi barrado
+$ sudo iptables -L -v -n               # confere tudo</pre>
+
+<p>E para a sua rede local sair para a internet com um IP público só (NAT — aula <a href="nat.html">NAT</a>):</p>
+
+<pre class="term">$ sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+$ sudo iptables -A FORWARD -i eth0 -o eth1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+$ sudo iptables -A FORWARD -i eth1 -o eth0 -j ACCEPT
+$ sudo iptables-save &gt; /etc/iptables/rules.v4   # salva as regras</pre>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Comando</th><th>Para que serve</th></tr>
+<tr><td><code>iptables -L -v -n --line-numbers</code></td><td>Lista as regras (com números, para apagar depois).</td></tr>
+<tr><td><code>iptables -P INPUT DROP</code></td><td>Define a política padrão da cadeia (bloqueia tudo que não casar).</td></tr>
+<tr><td><code>-A INPUT -p tcp --dport 443 -j ACCEPT</code></td><td>Acrescenta regra no fim da cadeia INPUT: TCP porta 443 entra.</td></tr>
+<tr><td><code>-m conntrack --ctstate ESTABLISHED,RELATED</code></td><td>Só deixa passar pacotes de conexões <strong>já existentes</strong> (respostas) — detalhe crucial para não travar a própria saída.</td></tr>
+<tr><td><code>-j LOG --log-prefix "…"</code></td><td>Registra no log do sistema o que foi descartado (diagnóstico).</td></tr>
+<tr><td><code>-t nat -A POSTROUTING -j MASQUERADE</code></td><td>NAT: troca o IP de origem dos pacotes que saem pela interface.</td></tr>
+<tr><td><code>-D INPUT 3</code></td><td>Apaga a regra número 3 da cadeia INPUT.</td></tr>
+<tr><td><code>iptables-save</code> / <code>iptables-restore</code></td><td>Salva e restaura todas as regras (persistência).</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>nftables: o sucessor moderno</h2>
+<p>O <code>nft</code> substitui o iptables aos poucos (sintaxe única, mais simples). Equivalentes:</p>
+
+<pre class="term">$ sudo nft list ruleset
+table inet filtro {
+  chain input {
+    type filter hook input priority 0; policy drop;
+    iif "lo" accept
+    ct state established,related accept
+    tcp dport { 22, 80, 443 } accept
+    icmp type echo-request accept
+  }
+}</pre>
+
+<hr>
+
+<h2>Firewall de rede vs firewall da máquina</h2>
+<p>O iptables/nft roda <strong>na própria máquina</strong> (firewall de host). Empresas também usam <strong>firewall de rede</strong> (um equipamento dedicado na borda, ex.: pfSense, Fortinet, Cisco ASA) que filtra o tráfego de toda a rede antes de chegar nas máquinas. Os dois se somam: a portaria do prédio <em>e</em> a fechadura da sua porta.</p>
+
+<div class="try" data-goal="LISTEN" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> no simulador e veja as portas que a máquina da Ana está escutando (22/SSH e 8000/HTTP). São essas portas que o firewall precisaria deixar passar (<code>-p tcp --dport 22 -j ACCEPT</code>) — ou bloquear, no caso de um servidor público.</p>
+</div>
+
+<div class="warning">
+<strong>Não tranque a porta atrás de você!</strong>
+<p>Se você está num servidor remoto <strong>conectado por SSH</strong> e aplica <code>-P INPUT DROP</code> sem liberar a porta 22 <em>antes</em>, você perde o acesso na hora — e só volta com acesso físico/console. Regra de ouro: (1) teste as regras localmente ou numa VM primeiro; (2) ao aplicar remotamente, mantenha uma segunda sessão aberta para reverter; (3) use <code>iptables -A INPUT -p tcp --dport 22 -j ACCEPT</code> <em>antes</em> de mudar a política; (4) muitos admins colocam um "timer de segurança" (ex.: <code>at</code>) que restaura as regras antigas em 10 minutos, caso dê tudo errado.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Firewall de host (iptables/nft) filtra pacotes na própria máquina: cadeias <strong>INPUT / OUTPUT / FORWARD</strong> + política padrão.</li>
+  <li>Regras são lidas em ordem e a primeira que casa vale; boa prática: política <strong>DROP</strong> no INPUT e liberar só o necessário (lo, conexões existentes, 22/80/443, ICMP).</li>
+  <li><code>conntrack ESTABLISHED,RELATED</code> deixa voltar as respostas — sem isso, até a própria saída trava.</li>
+  <li><code>MASQUERADE</code> faz o NAT da sua rede para a internet; <code>nft</code> é o sucessor moderno do iptables.</li>
+  <li>Nunca mude a política padrão remotamente sem garantir a porta do seu acesso (SSH) — ou você fica trancado para fora.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="proxy-reverso.html">Proxy e proxy reverso (nginx)</a> — a "recepcionista" que recebe os pedidos e encaminha para os servidores certos.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

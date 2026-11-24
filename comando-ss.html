@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comando ss (e netstat) — quais portas estão abertas na máquina | Guia Redes</title>
+<meta name="description" content="O comando ss -tlnp (e o antigo netstat -tlnp): a lista de portas que a máquina está escutando (LISTEN). Na máquina da Ana: porta 22 (sshd, acesso remoto SSH) e porta 8000 (python3 http.server, o servidorzinho de páginas dela). Como ler as colunas (Netid, State, Recv-Q, Send-Q, Local Address:Port, Peer, Process), o significado de 0.0.0.0 (aceita conexões de qualquer lugar) e 127.0.0.1 (só local). Missões: ss -tlnp e nc -zv localhost 8000.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Comando <span class="hl">ss -tlnp</span>: quais portas estão abertas</h1>
+
+<p class="intro">Sua máquina pode ser <strong>servidora</strong> também: um programa nela fica <em>escutando</em> numa porta, esperando pedidos. O comando <code>ss -tlnp</code> lista exatamente isso — as salas abertas no seu prédio. Na máquina da Ana há duas: o SSH (22) e um servidorzinho de páginas (8000).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que o <code>ss</code> mostra: as conexões de rede da máquina, especialmente as que <strong>escutam</strong> (LISTEN).</li>
+  <li>A anatomia das opções: <code>-t</code> (TCP), <code>-l</code> (só escuta), <code>-n</code> (números, sem traduzir), <code>-p</code> (mostra o processo).</li>
+  <li>Ler as colunas: Netid, State, Local Address:Port, Peer e Process.</li>
+  <li><code>0.0.0.0</code> = aceita conexões de qualquer lugar; <code>127.0.0.1</code> = só da própria máquina.</li>
+  <li>O primo antigo <code>netstat -tlnp</code>, que faz a mesma coisa.</li>
+  <li>Testar a porta aberta de verdade com <code>nc -zv localhost 8000</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A anatomia das opções</h2>
+<dl class="anatomy">
+  <dt>ss</dt><dd>"Socket Statistics": mostra as conexões (sockets) da máquina.</dd>
+  <dt>-t</dt><dd>Só conexões <strong>TCP</strong> (as de UDP serían <code>-u</code>).</dd>
+  <dt>-l</dt><dd><em>listening</em>: só as portas que estão <strong>escutando</strong>, esperando pedido (LISTEN).</dd>
+  <dt>-n</dt><dd><em>numeric</em>: mostra números (22, 8000) em vez de traduzir para nomes de serviço (ssh, http-alt).</dd>
+  <dt>-p</dt><dd><em>process</em>: mostra qual <strong>processo</strong> abriu a porta (ex.: sshd, python3).</dd>
+</dl>
+
+<hr>
+
+<h2>A saída na máquina da Ana</h2>
+<pre class="term">$ ss -tlnp
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22          0.0.0.0:*     users:(("sshd",4321))
+TCP   LISTEN 0      128    0.0.0.0:8000        0.0.0.0:*     users:(("python3",8765))</pre>
+<p>Lendo a tabela:</p>
+<ul>
+  <li><code>TCP LISTEN</code> — protocolo TCP, estado escutando (esperando conexão).</li>
+  <li><code>0.0.0.0:22</code> — escuta na porta <strong>22</strong> em <code>0.0.0.0</code>, ou seja, <strong>aceita conexões de qualquer IP</strong> (de fora também).</li>
+  <li><code>users:(("sshd",4321))</code> — o processo <code>sshd</code> (servidor SSH) foi quem abriu a porta 22.</li>
+  <li><code>0.0.0.0:8000</code> com <code>python3</code> — é o <code>python3 http.server</code> que a Ana ligou: um servidor de páginas na porta 8000.</li>
+  <li><code>Peer 0.0.0.0:*</code> — ainda não tem ninguém conectado (quando alguém conectar, aparece o IP dele aqui).</li>
+</ul>
+
+<div class="try" data-goal="LISTEN" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> digite <code>ss -tlnp</code> e aperte <kbd>Enter</kbd>. Devem aparecer duas linhas <code>LISTEN</code>: as portas 22 (sshd) e 8000 (python3) do notebook da Ana.</p>
+</div>
+
+<hr>
+
+<h2>0.0.0.0 vs 127.0.0.1: quem pode bater na porta</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Endereço de escuta</th><th>Significado</th><th>Exemplo</th></tr>
+<tr><td><code>0.0.0.0:8000</code></td><td>Aceita conexões de <strong>qualquer lugar</strong> (sua rede e a internet, se passar pelo roteador)</td><td>O servidorzinho da Ana na 8000</td></tr>
+<tr><td><code>127.0.0.1:8000</code></td><td>Aceita só conexões da <strong>própria máquina</strong> (mais seguro)</td><td>Um banco de dados local de desenvolvimento</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Testando a porta aberta: nc -zv localhost 8000</h2>
+<p>Depois de ver a porta 8000 escutando, dá para bater nela de verdade com o netcat:</p>
+<pre class="term">$ nc -zv localhost 8000
+Connection to localhost 8000 port [tcp/*] succeeded!</pre>
+
+<div class="try" data-goal="succeeded" data-solucao="nc -zv localhost 8000">
+<p class="try-task"><strong>Missão:</strong> digite <code>nc -zv localhost 8000</code> e aperte <kbd>Enter</kbd>. Como a porta 8000 está aberta (você viu no <code>ss</code>), a resposta deve ser <code>… succeeded!</code>.</p>
+</div>
+
+<hr>
+
+<h2>O primo antigo: netstat -tlnp</h2>
+<p>Muitos tutoriais usam <code>netstat -tlnp</code> — faz exatamente a mesma coisa que o <code>ss -tlnp</code> (hoje o <code>ss</code> é o recomendado, mais rápido):</p>
+<pre class="term">$ netstat -tlnp
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:Port Process
+TCP   LISTEN 0      128    0.0.0.0:22          0.0.0.0:*     users:(("sshd",4321))
+TCP   LISTEN 0      128    0.0.0.0:8000        0.0.0.0:*     users:(("python3",8765))</pre>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>ss -tlnp</code> = TCP + listening + numérico + processo: a lista das portas que a máquina está escutando.</li>
+  <li>Na máquina da Ana: <code>0.0.0.0:22</code> (sshd) e <code>0.0.0.0:8000</code> (python3 http.server).</li>
+  <li><code>0.0.0.0</code> aceita de qualquer lugar; <code>127.0.0.1</code> só local.</li>
+  <li><code>netstat -tlnp</code> é o equivalente antigo; <code>nc -zv HOST PORTA</code> testa se a sala está aberta.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="devtools-f12.html">DevTools (F12): ver a rede no navegador</a> — a aba Network mostra, sem sair do Chrome/Firefox, tudo o que vimos aqui: requisições, status, cabeçalhos e tempo.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

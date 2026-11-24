@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTPS e TLS: a conversa criptografada (o cadeado do navegador) | Guia Redes</title>
+<meta name="description" content="O que é HTTPS e como o TLS criptografa a conversa: HTTP na porta 80 vai em texto puro (cartão-postal) e HTTPS na porta 443 vai cifrado (carta lacrada). Handshake TLS resumido, certificado digital e Autoridade Certificadora (CA), HSTS (Strict-Transport-Security), o que o cadeado significa — e o que ele NÃO esconde. Testes com curl -v (porta 80 vs 443) no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">HTTPS / TLS</span> — o cadeado da conversa</h1>
+
+<p class="intro">O HTTP manda tudo em <strong>texto puro</strong> — como um cartão-postal: qualquer um no caminho pode ler. O HTTPS é a mesma conversa dentro de uma <strong>carta lacrada num cofre</strong>: só as duas pontas têm a chave. O protocolo que faz o cofre é o <strong>TLS</strong>, e é por causa dele que o navegador mostra um cadeado.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A diferença entre HTTP (porta <strong>80</strong>) e HTTPS (porta <strong>443</strong>).</li>
+  <li>O <strong>handshake TLS</strong>, resumido: certificado digital, chave pública e a Autoridade Certificadora (CA).</li>
+  <li>O que o cadeado no navegador garante — e o que ele <strong>não</strong> garante.</li>
+  <li>O header <code>Strict-Transport-Security</code> (HSTS).</li>
+  <li>Comparar as portas 80 e 443 com <code>curl -v</code> no simulador.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>HTTP vs HTTPS</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>HTTP</th><th>HTTPS</th></tr>
+<tr><td><strong>Porta padrão</strong></td><td>80</td><td>443</td></tr>
+<tr><td><strong>Conteúdo na rede</strong></td><td>texto puro (qualquer um lê)</td><td>criptografado com TLS</td></tr>
+<tr><td><strong>Cadeado no navegador</strong></td><td>não tem</td><td>tem (quando o certificado é válido)</td></tr>
+<tr><td><strong>Uso hoje</strong></td><td>só redireciona para o HTTPS</td><td>o padrão da internet</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>O handshake TLS, resumido</h2>
+<p>Antes de trocar qualquer dado, as duas pontas fazem uma <strong>negociação</strong> (handshake):</p>
+<ol>
+  <li>O cliente diz: "olá, suporto TLS 1.3 — estes são os jeitos de criptografar que eu conheço".</li>
+  <li>O servidor responde com o seu <strong>certificado digital</strong>: nele há o <strong>nome do domínio</strong> e a <strong>chave pública</strong> do servidor, e o certificado é <strong>assinado eletronicamente por uma Autoridade Certificadora (CA)</strong> — como um cartório que atesta "este domínio é realmente deste servidor".</li>
+  <li>O cliente confere o certificado: o domínio bate com o pedido? a CA é confiável? o certificado não venceu?</li>
+  <li>Se estiver tudo certo, o cliente cria uma <strong>chave de sessão</strong> (um segredo só desta conversa), criptografa ela com a <strong>chave pública</strong> do servidor e manda.</li>
+  <li>Pronto: a partir daí, <strong>todo o tráfego vai criptografado</strong> nessa chave de sessão — só as duas pontas conseguem ler.</li>
+</ol>
+<p>Analogia: é como mandar pelo correio um <strong>cadeado aberto</strong>: só o destinatário tem a chave para fechá-lo. Quem intercepta o cadeado no caminho não consegue abri-lo depois.</p>
+
+<hr>
+
+<h2>No terminal: porta 80 vs porta 443</h2>
+<p>O <code>curl -v</code> mostra a porta usada na conexão. Compare:</p>
+<pre class="term">$ curl -v http://exemplo.com
+* Trying 93.184.216.34:80...
+* Connected to exemplo.com (93.184.216.34) port 80
+> GET exemplo.com HTTP/1.1
+> Host: exemplo.com
+...
+$ curl -v https://exemplo.com
+* Trying 93.184.216.34:443...
+* Connected to exemplo.com (93.184.216.34) port 443
+> GET exemplo.com HTTP/1.1
+> Host: exemplo.com
+...</pre>
+<p>Mesma página, portas diferentes: <code>80</code> para HTTP (texto puro) e <code>443</code> para HTTPS (cifrado).</p>
+<pre class="term">$ curl -i https://exemplo.com
+HTTP/2 200
+server: nginx/1.25.3
+content-type: text/html; charset=UTF-8
+strict-transport-security: max-age=31536000</pre>
+<p>Dois detalhes: o HTTPS moderno fala <code>HTTP/2</code> (rápido e multiplexado), e o header <code>strict-transport-security</code> (HSTS) manda o navegador <strong>só aceitar HTTPS</strong> naquele domínio dali em diante — mesmo que alguém digite <code>http://</code>.</p>
+
+<div class="try" data-goal="port 443" data-solucao="curl -v https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> veja o HTTPS conectando na porta 443: <code>curl -v https://exemplo.com</code> — ache <code>port 443</code></p>
+</div>
+
+<div class="try" data-goal="port 80" data-solucao="curl -v http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> compare com o HTTP puro, na porta 80: <code>curl -v http://exemplo.com</code></p>
+</div>
+
+<div class="try" data-goal="strict-transport-security" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> ache o header HSTS na resposta HTTPS: <code>curl -i https://exemplo.com</code></p>
+</div>
+
+<div class="warning">
+<strong>O que o cadeado NÃO esconde:</strong> HTTPS criptografa o <em>conteúdo</em> da conversa, mas o <strong>nome do domínio</strong> ainda aparece na consulta DNS (aula <a href="como-dns-funciona.html">DNS a fundo</a>) — o "endereço do destinatário" continua visível, só a "carta" fica lacrada. E se o certificado estiver vencido, com domínio errado ou de CA desconhecida, o navegador <strong>bloqueia com aviso</strong> — nunca ignore esse aviso.
+</div>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">Qual porta o HTTPS usa por padrão?</p>
+<label><input type="radio" name="q1"> 80</label>
+<label><input type="radio" name="q1"> 53</label>
+<label><input type="radio" name="q1"> 22</label>
+<label><input type="radio" name="q1"> 443</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>HTTP = cartão-postal (porta 80, texto puro); HTTPS = carta lacrada (porta 443, criptografada com TLS).</li>
+  <li>No handshake, o servidor mostra o <strong>certificado digital</strong> (domínio + chave pública, assinado por uma CA); o cliente confere e manda uma chave de sessão criptografada com essa chave pública.</li>
+  <li>Depois do handshake, tudo trafega cifrado — é o cadeado do navegador.</li>
+  <li><code>curl -v https://…</code> mostra <code>port 443</code>; <code>curl -v http://…</code> mostra <code>port 80</code>.</li>
+  <li>HSTS (<code>strict-transport-security</code>) obriga o navegador a usar só HTTPS naquele domínio.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="como-dns-funciona.html">Como o DNS funciona: raiz, TLD e autoritativo</a> — a agenda telefônica da internet por dentro, passo a passo, com <code>dig +trace</code>.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

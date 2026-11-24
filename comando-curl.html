@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comando curl a fundo — -i, -I, -v, POST, JSON e erros | Guia Redes</title>
+<meta name="description" content="O comando curl completo para o dia a dia: anatomia (curl -i -X GET https://…), tabela de opções (-i cabeçalhos, -I só cabeçalhos, -v conversa inteira, -X método, -d dados, -o salva arquivo), exemplos reais no simulador (curl -v exemplo.com mostra Trying/Connected/GET, POST com JSON em api.exemplo.com/usuarios, 404 em /nao-existe, erro de DNS com Could not resolve). Missões: curl -v exemplo.com e curl -i http://exemplo.com/nao-existe.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Comando <span class="hl">curl</span> a fundo</h1>
+
+<p class="intro">O <code>curl</code> é o canivete suíço para falar HTTP pela linha de comando. Nesta aula você conhece as opções que mais usa no dia a dia — <code>-i</code>, <code>-I</code>, <code>-v</code>, <code>-X</code>, <code>-d</code> — e vê cada uma funcionando no simulador, inclusive os erros reais.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A anatomia: <code>curl [OPÇÕES] URL</code>.</li>
+  <li><code>-i</code> (cabeçalhos + corpo), <code>-I</code> (só cabeçalhos), <code>-v</code> (a conversa inteira, estilo debug).</li>
+  <li><code>-X POST -d '…'</code>: enviar dados (JSON) para uma API.</li>
+  <li>Os erros reais: <code>Could not resolve host</code> (DNS) e <code>404 Not Found</code> (recurso inexistente).</li>
+  <li>Ler a saída do <code>-v</code>: <code>* Trying</code>, <code>* Connected</code>, <code>&gt; GET …</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Anatomia do comando</h2>
+<dl class="anatomy">
+  <dt>curl</dt><dd>O programa: cliente HTTP de linha de comando.</dd>
+  <dt>-i</dt><dd><em>include</em>: imprime os cabeçalhos da resposta antes do corpo.</dd>
+  <dt>-X GET</dt><dd><em>request</em>: o método HTTP (GET é o padrão; aqui só explicitando).</dd>
+  <dt>https://exemplo.com</dt><dd>A URL: protocolo + domínio + caminho. Sem protocolo, assume <code>http://</code>.</dd>
+</dl>
+
+<hr>
+
+<h2>Opções do dia a dia</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Opção</th><th>O que faz</th><th>Quando usar</th></tr>
+<tr><td><code>-i</code></td><td>Mostra os cabeçalhos da resposta + o corpo</td><td>Ver status (200, 404…) e tipo do conteúdo</td></tr>
+<tr><td><code>-I</code></td><td>Mostra <strong>só os cabeçalhos</strong> (pedido HEAD)</td><td>Descobrir status/tamanho sem baixar o conteúdo</td></tr>
+<tr><td><code>-v</code></td><td>Modo verboso: mostra a conversa inteira (DNS, conexão, pedido)</td><td>Debug: "por que esse site não abre?"</td></tr>
+<tr><td><code>-X POST</code></td><td>Muda o método para POST (ou PUT, DELETE…)</td><td>Enviar dados para uma API</td></tr>
+<tr><td><code>-d 'dados'</code></td><td>Envia um corpo na requisição (ex.: JSON)</td><td>Junto com <code>-X POST</code>: formulários e APIs</td></tr>
+<tr><td><code>-o arquivo</code></td><td>Salva a resposta num arquivo em vez de imprimir</td><td>Baixar arquivos/imagens</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>-v: a conversa inteira (modo debug)</h2>
+<p>Com <code>-v</code>, o curl conta tudo o que aconteceu: qual IP o DNS devolveu, em qual porta conectou e o pedido enviado:</p>
+<pre class="term">$ curl -v exemplo.com
+* Trying 93.184.216.34:80...
+* Connected to exemplo.com (93.184.216.34) port 80
+&gt; GET exemplo.com HTTP/1.1
+&gt; Host: exemplo.com
+&gt; User-Agent: curl/8.5.0
+&gt; Accept: */*
+&gt;
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+…
+* Connection #0 to host exemplo.com left intact</pre>
+<p>As linhas com <code>*</code> são do próprio curl (diagnóstico); as com <code>&gt;</code> são o pedido enviado; o resto é a resposta do servidor.</p>
+
+<div class="try" data-goal="Connected to" data-solucao="curl -v exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -v exemplo.com</code> e aperte <kbd>Enter</kbd>. Procure a linha <code>* Connected to exemplo.com (93.184.216.34) port 80</code> — a conexão aconteceu.</p>
+</div>
+
+<hr>
+
+<h2>POST com JSON: enviar dados para uma API</h2>
+<p>APIs aceitam dados em JSON. O comando manda um usuário novo para a API fictícia:</p>
+<pre class="term">$ curl -i -X POST -d '{"nome":"Novo"}' https://api.exemplo.com/usuarios
+HTTP/2 200
+content-type: application/json
+content-length: 87
+
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]</pre>
+<p>O <code>-X POST</code> muda o método e o <code>-d '{…}'</code> envia o corpo em JSON. A API devolveu a lista de usuários (no simulador, a resposta é fixa) com status 200.</p>
+
+<hr>
+
+<h2>Erro real: recurso que não existe (404)</h2>
+<div class="warning">
+<strong>404 Not Found</strong>
+<pre class="term">$ curl -i http://exemplo.com/nao-existe
+HTTP/1.1 404 Not Found
+Server: nginx/1.25.3
+Content-Type: text/html
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+<p>A conversa funcionou (o servidor respondeu), mas o recurso <code>/nao-existe</code> não existe lá — por isso o status 404. Repare que o corpo também traz uma página de erro.</p>
+</div>
+
+<div class="try" data-goal="404 Not Found" data-solucao="curl -i http://exemplo.com/nao-existe">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i http://exemplo.com/nao-existe</code> e aperte <kbd>Enter</kbd>. A primeira linha da resposta deve ser <code>HTTP/1.1 404 Not Found</code>.</p>
+</div>
+
+<hr>
+
+<h2>Erro real: nome que o DNS não acha</h2>
+<div class="warning">
+<strong>Could not resolve host</strong>
+<pre class="term">$ curl site-que-nao-existe.com
+curl: (6) Could not resolve host: site-que-nao-existe.com</pre>
+<p>Antes de qualquer conversa, o curl precisa traduzir o nome em IP. Se o DNS não conhece o nome, dá esse erro — a página "não abre" porque o <em>nome</em> não foi encontrado.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>curl [OPÇÕES] URL</code>: faz a requisição HTTP e imprime a resposta.</li>
+  <li><code>-i</code> cabeçalhos + corpo · <code>-I</code> só cabeçalhos · <code>-v</code> conversa inteira (Trying/Connected/GET) · <code>-X POST -d '{…}'</code> envia JSON · <code>-o</code> salva em arquivo.</li>
+  <li>Erros reais: <code>curl: (6) Could not resolve host:</code> (DNS) e <code>404 Not Found</code> (recurso inexistente, mas a rede funcionou).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="comando-dig.html">Comando dig/nslookup</a> — perguntar direto ao DNS: saída completa, +short, NXDOMAIN e /etc/resolv.conf.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

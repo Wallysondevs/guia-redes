@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto 3 — DNS local com /etc/hosts e dig (meusite.local) | Guia Redes</title>
+<meta name="description" content="Projeto prático de redes: entenda o arquivo /etc/hosts como a agenda de apelidos local do DNS, adicione a linha 192.168.1.60 meusite.local, confirme com dig meusite.local +short (resposta 192.168.1.60), nslookup e ping, e veja quem são os servidores DNS da máquina com cat /etc/resolv.conf (192.168.1.1 e 8.8.8.8). Missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto 3 — <span class="hl">DNS local</span>: /etc/hosts + dig</h1>
+
+<p class="intro">O DNS é a <strong>agenda telefônica da internet</strong>: traduz nomes em IPs. Mas e se você quiser um apelido que <em>só funciona no seu computador</em> — sem registrar domínio nenhum? Aí entra o <code>/etc/hosts</code>: um <strong>caderno de apelidos local</strong>, que o sistema consulta <em>antes</em> de ligar para o DNS. É perfeito para testar um site antes de ele ir para o ar.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o <code>/etc/hosts</code> e a ordem de consulta: hosts local primeiro, DNS depois.</li>
+  <li>A adicionar um apelido: <code>192.168.1.60   meusite.local</code>.</li>
+  <li>A confirmar com <code>dig meusite.local +short</code> → <code>192.168.1.60</code>, <code>nslookup</code> e <code>ping</code>.</li>
+  <li>Quem são os servidores DNS da máquina: <code>cat /etc/resolv.conf</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Passo 1 — ver o caderno de apelidos atual</h2>
+<p>O arquivo <code>/etc/hosts</code> tem linhas no formato <code>IP   nome1 nome2…</code>. Na máquina da Ana ele já traz o básico:</p>
+<pre class="term">$ cat /etc/hosts
+127.0.0.1   localhost
+127.0.1.1   notebook
+192.168.1.50 notebook
+192.168.1.1  roteador gateway</pre>
+
+<div class="try" data-goal="roteador" data-solucao="cat /etc/hosts">
+<p class="try-task"><strong>Missão:</strong> rode <code>cat /etc/hosts</code> e veja os apelidos que já existem (repare no <code>192.168.1.1 roteador gateway</code>).</p>
+</div>
+
+<hr>
+
+<h2>Passo 2 — adicionar o apelido do projeto</h2>
+<p>A Ana tem um servidorzinho em <code>192.168.1.60</code> na rede dela e quer chamá-lo de <code>meusite.local</code>. Basta anexar uma linha no arquivo (na máquina real precisa de <code>sudo</code>, porque o arquivo é do sistema):</p>
+<pre class="term">$ echo "192.168.1.60   meusite.local" | sudo tee -a /etc/hosts
+192.168.1.60   meusite.local</pre>
+<pre class="file">/etc/hosts
+127.0.0.1   localhost
+127.0.1.1   notebook
+192.168.1.50 notebook
+192.168.1.1  roteador gateway
+192.168.1.60   meusite.local     « a linha nova</pre>
+<p>Agora <code>meusite.local</code> vale <code>192.168.1.60</code> <strong>nesta máquina só</strong> — nenhum servidor DNS do mundo conhece esse nome. No simulador, o apelido já está cadastrado na tabela DNS fictícia; é por isso que o <code>dig</code> abaixo já responde.</p>
+
+<hr>
+
+<h2>Passo 3 — confirmar que o apelido resolve</h2>
+<pre class="term">$ dig meusite.local +short
+192.168.1.60
+$ nslookup meusite.local
+Server:         192.168.1.1
+Address:        192.168.1.1#53
+
+Non-authoritative answer:
+Name:   meusite.local
+Address: 192.168.1.60
+$ ping -c 2 meusite.local
+PING meusite.local (192.168.1.60) 56(84) bytes of data.
+64 bytes from 192.168.1.60: icmp_seq=1 ttl=64 time=2.31 ms
+64 bytes from 192.168.1.60: icmp_seq=2 ttl=64 time=1.98 ms</pre>
+<p>Funcionou: o nome foi traduzido para o IP <em>antes de qualquer consulta ao DNS externo</em> — dá para provar tirando o cabo de rede: o <code>ping meusite.local</code> continua funcionando, porque a resposta está no <code>/etc/hosts</code> local.</p>
+
+<div class="try" data-goal="192.168.1.60" data-solucao="dig meusite.local +short">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig meusite.local +short</code> e confirme que o apelido responde <code>192.168.1.60</code>.</p>
+</div>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping meusite.local">
+<p class="try-task"><strong>Missão extra:</strong> rode <code>ping meusite.local</code> — repare que o próprio ping mostra o IP entre parênteses: <code>PING meusite.local (192.168.1.60)</code>.</p>
+</div>
+
+<hr>
+
+<h2>Passo 4 — quem são os servidores DNS desta máquina?</h2>
+<p>Quando o nome <strong>não</strong> está no <code>/etc/hosts</code>, o sistema pergunta aos servidores listados no <code>/etc/resolv.conf</code>:</p>
+<pre class="term">$ cat /etc/resolv.conf
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+search localdomain</pre>
+<p>A máquina da Ana usa o <strong>roteador da casa</strong> (<code>192.168.1.1</code>, que o DHCP entregou) e o <strong>DNS público do Google</strong> (<code>8.8.8.8</code>) como reserva. O <code>search localdomain</code> completa nomes curtos com <code>.localdomain</code>.</p>
+
+<div class="try" data-goal="nameserver 8.8.8.8" data-solucao="cat /etc/resolv.conf">
+<p class="try-task"><strong>Missão:</strong> rode <code>cat /etc/resolv.conf</code> e ache os dois servidores DNS configurados.</p>
+</div>
+
+<div class="warning">
+<strong>Detalhe real:</strong> em sistemas modernos (systemd-resolved), o <code>/etc/resolv.conf</code> pode ser um arquivo gerado — a edição manual vai para <code>/etc/systemd/resolved.conf</code>. E editar o <code>/etc/hosts</code> exige <code>sudo</code>. A ordem de consulta continua a mesma: <strong>hosts local primeiro, DNS depois</strong> (aula <a href="arquivo-hosts.html">arquivo hosts</a> aprofunda).</div>
+
+<hr>
+
+<h2>Resumo do projeto</h2>
+<ul>
+  <li><code>/etc/hosts</code> = apelidos locais de IP; consultado antes do DNS.</li>
+  <li>Formato: <code>IP   nome</code> — ex.: <code>192.168.1.60   meusite.local</code>.</li>
+  <li>Confirme com <code>dig meusite.local +short</code> → <code>192.168.1.60</code> e <code>ping meusite.local</code>.</li>
+  <li>Os servidores DNS da máquina estão em <code>/etc/resolv.conf</code> (<code>nameserver …</code>).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="projeto-rede-virtual.html">Projeto 4 — rede virtual entre duas VMs no VirtualBox</a> — e para dar esse <code>192.168.1.60</code> de verdade, crie uma segunda máquina virtual na mesma rede interna.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

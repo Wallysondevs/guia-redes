@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comando ping a fundo — opções, estatísticas e erros | Guia Redes</title>
+<meta name="description" content="O comando ping completo: anatomia (ping -c 4 exemplo.com), opções (-c número de pacotes, host por IP direto), como ler as estatísticas (packets transmitted, received, packet loss, time), os erros reais do ping no simulador (cannot resolve quando o DNS não acha o nome) e a ordem certa de diagnóstico: ping no próprio IP, no gateway, na internet. Missões: ping -c 3 exemplo.com e ping num nome inexistente.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Comando <span class="hl">ping</span> a fundo</h1>
+
+<p class="intro">Você já pingou na aula anterior — agora vamos abrir o comando: a anatomia, as opções úteis, como ler as estatísticas e os erros que ele mostra. No fim, você aprende a <strong>ordem clássica de diagnóstico</strong> com ping: do mais perto (sua máquina) até a internet.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A anatomia: <code>ping [-c N] HOST</code> — o que cada peça faz.</li>
+  <li>Pingar por <strong>IP direto</strong> (pula o DNS) e por <strong>nome</strong> (passa pelo DNS).</li>
+  <li>Ler as estatísticas: transmitidos, recebidos, perda % e tempo total.</li>
+  <li>O erro real <code>cannot resolve</code>: o DNS não achou o nome.</li>
+  <li>A ordem de diagnóstico: 127.0.0.1 → IP da máquina → gateway → internet.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Anatomia do comando</h2>
+<dl class="anatomy">
+  <dt>ping</dt><dd>O programa: manda pacotes ICMP echo ("alô") e ouve a resposta.</dd>
+  <dt>-c 3</dt><dd><em>count</em>: manda só 3 pacotes e para (o padrão no simulador é 4; no Linux real é infinito até <kbd>Ctrl</kbd>+<kbd>C</kbd>).</dd>
+  <dt>exemplo.com</dt><dd>O <strong>destino</strong>: pode ser um nome (o DNS traduz na hora) ou um IP direto.</dd>
+</dl>
+<pre class="term">$ ping -c 3 exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+64 bytes from 93.184.216.34: icmp_seq=3 ttl=64 time=23.7 ms
+
+--- exemplo.com ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2002ms</pre>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping -c 3 exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping -c 3 exemplo.com</code> e aperte <kbd>Enter</kbd>. Devem voltar exatamente 3 linhas <code>64 bytes from …</code> e o resumo deve dizer <code>3 packets transmitted, 3 received</code>.</p>
+</div>
+
+<hr>
+
+<h2>Nome ou IP? A diferença passa pelo DNS</h2>
+<p>Compare: pingar o <strong>nome</strong> exige que o DNS traduza primeiro (e pode falhar no nome); pingar o <strong>IP</strong> vai direto:</p>
+<pre class="term">$ ping exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms …
+$ ping 93.184.216.34
+PING 93.184.216.34 (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.1 ms …</pre>
+<p>Útil para diagnosticar: se <code>ping exemplo.com</code> falha com erro de nome mas <code>ping 93.184.216.34</code> responde, o problema é o <strong>DNS</strong>, não a rede.</p>
+
+<hr>
+
+<h2>Erro real: nome que não existe</h2>
+<div class="warning">
+<strong>cannot resolve</strong>
+<pre class="term">$ ping site-que-nao-existe.com
+ping: cannot resolve site-que-nao-existe.com: Name or service not known</pre>
+<p>O ping nem chegou a mandar pacote: o DNS disse que esse nome não existe (NXDOMAIN). Nome errado = esse erro. Confira a escrita ou teste com <code>dig site-que-nao-existe.com</code>.</p>
+</div>
+
+<div class="try" data-goal="cannot resolve" data-solucao="ping site-que-nao-existe.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping site-que-nao-existe.com</code> e aperte <kbd>Enter</kbd>. Veja o erro <code>cannot resolve</code> — o DNS não achou esse nome.</p>
+</div>
+
+<hr>
+
+<h2>Lendo as estatísticas</h2>
+<ul>
+  <li><code>4 packets transmitted, 4 received</code> — quantos saíram e quantos voltaram.</li>
+  <li><code>0% packet loss</code> — a perda de pacotes. Perto de 100% = o destino não está respondendo (ou bloqueia ICMP).</li>
+  <li><code>time 3000ms</code> — o tempo total do teste (1 segundo entre cada pacote).</li>
+</ul>
+
+<hr>
+
+<h2>A ordem clássica de diagnóstico com ping</h2>
+<p>Quando "a internet não funciona", pingue nessa ordem — cada etapa elimina uma suspeita:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Ordem</th><th>Comando</th><th>Se falhar, o problema é…</th></tr>
+<tr><td>1</td><td><code>ping 127.0.0.1</code></td><td>A própria máquina (rede interna quebrada)</td></tr>
+<tr><td>2</td><td><code>ping 192.168.1.50</code></td><td>Sua placa de rede / cabo / Wi-Fi</td></tr>
+<tr><td>3</td><td><code>ping 192.168.1.1</code></td><td>A conexão com o roteador (sua rede local)</td></tr>
+<tr><td>4</td><td><code>ping 8.8.8.8</code></td><td>A saída para a internet (roteador ou provedor)</td></tr>
+<tr><td>5</td><td><code>ping exemplo.com</code></td><td>Somente o DNS (a rede está ok, o nome não resolve)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>ping [-c N] HOST</code>: manda N pacotes de teste e mede resposta e tempo. Nome passa pelo DNS; IP vai direto.</li>
+  <li>Estatísticas: transmitidos/recebidos, <code>% packet loss</code> e tempo total.</li>
+  <li>Erro <code>cannot resolve … Name or service not known</code> = o DNS não achou o nome.</li>
+  <li>Diagnóstico em escada: 127.0.0.1 → seu IP → gateway → 8.8.8.8 → nome na internet.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="comando-curl.html">Comando curl a fundo</a> — -i, -I, -v, -X POST, -d e o 404 de verdade, tudo no simulador.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

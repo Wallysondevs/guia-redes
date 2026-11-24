@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DDoS: o que é e como se proteger | Guia Redes</title>
+<meta name="description" content="DDoS (negação de serviço distribuída) explicado com a analogia de milhares de ligações simultâneas para uma central telefônica: botnets, tipos de ataque (volumétrico, protocolo, aplicação), sinais de que você está sofrendo um ataque, e as defesas (mitigação na operadora/CDN, rate limiting, WAF, anycast, plano de resposta). Missão com tcpdump vendo o tráfego no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">DDoS</span>: o que é e como se proteger</h1>
+
+<p class="intro">Imagine uma central telefônica que atende 10 ligações por minuto. Agora imagine que <strong>milhões de telefones tocam para ela ao mesmo tempo</strong>, de números que ela nunca viu — nenhuma ligação de verdade consegue entrar. Isso é um ataque de <strong>negação de serviço</strong>: quando feito de vários lugares ao mesmo tempo (distribuído), é o <strong>DDoS</strong> — Distributed Denial of Service.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é DoS × DDoS e o que é uma <strong>botnet</strong> (rede de zumbis);</li>
+  <li>Os três tipos de ataque: <strong>volumétrico</strong>, de <strong>protocolo</strong> e de <strong>aplicação</strong> (camada 7);</li>
+  <li>Os sinais de que você está sofrendo um ataque;</li>
+  <li>Como se defender: mitigação na borda (CDN/operadora), rate limiting, WAF, anycast, plano de resposta;</li>
+  <li>O que fazer (e o que NÃO fazer) durante um ataque.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>DoS × DDoS × botnet</h2>
+<p>Um <strong>DoS</strong> (Denial of Service) sai de <strong>uma</strong> máquina — fácil de bloquear pelo IP. O <strong>DDoS</strong> usa milhares de máquinas ao mesmo tempo, e aí não adianta bloquear um IP: são milhares. Essas máquinas são geralmente computadores e dispositivos IoT infectados (câmeras, roteadores, DVRs…) sem o dono saber — juntos formam uma <strong>botnet</strong> (rede de robôs/zumbis), controlada remotamente por um "pastor" (botmaster).</p>
+
+<pre class="term">botmaster ──comando──► botnet (milhares de máquinas infectadas, espalhadas pelo mundo)
+                              │
+                              ▼  todo mundo manda tráfego para o alvo ao mesmo tempo
+                         vitima (ex.: exemplo.com)  →  servidor fica sem conseguir atender ninguém</pre>
+
+<hr>
+
+<h2>Os três tipos de ataque DDoS</h2>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Tipo</th><th>Analogia</th><th>Como funciona</th><th>Defesa típica</th></tr>
+<tr><td><strong>Volumétrico</strong></td><td>Encher um cano de água até transbordar</td><td>Envia um volume absurdo de tráfego (UDP flood, amplificação DNS/NTP) para esgotar a banda do alvo.</td><td>Mitigação na operadora/CDN (scrubbing), anycast para espalhar o impacto.</td></tr>
+<tr><td><strong>De protocolo</strong></td><td>Deixar o porteiro ocupado com papéis falsos</td><td>Abusa de handshakes incompletos (SYN flood): manda milhões de SYN e nunca responde o ACK, deixando conexões meio-abertas que lotam a tabela do servidor.</td><td>SYN cookies, firewall de estado, aumentar a fila de conexões meio-abertas.</td></tr>
+<tr><td><strong>De aplicação (L7)</strong></td><td>Pedir o prato mais caro do cardápio mil vezes</td><td>Requisições HTTP que parecem de usuários de verdade, mas miram recursos caros (login, busca, relatório) para exaurir CPU/memória do servidor.</td><td>WAF, rate limiting por IP/usuário, cache na <a href="cdn.html">CDN</a>, CAPTCHA.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Sinais de que você está sofrendo DDoS</h2>
+<ul>
+  <li>Site/serviço fica lento ou cai de repente, sem pico legítimo de acesso;</li>
+  <li><code>ping</code> para o servidor começa a dar timeout (a banda ou a CPU lotou);</li>
+  <li>Logs mostram milhares de requisições vindas de IPs aleatórios, de países estranhos, com o mesmo padrão;</li>
+  <li>O <code>tcpdump</code> mostra um volume anormal de pacotes (ou de SYN) na interface.</li>
+</ul>
+
+<div class="try" data-goal="listening on eth0" data-solucao="tcpdump -i eth0">
+<p class="try-task"><strong>Missão:</strong> rode <code>tcpdump -i eth0</code> no simulador para capturar pacotes na placa — é assim que se "vê" o tráfego chegando. Num ataque real, você veria um volume anormal de pacotes vindos de muitos IPs diferentes. Rode também <code>ping exemplo.com</code> e <code>ss -tlnp</code> para ver o estado normal da máquina.</p>
+</div>
+
+<pre class="term">$ tcpdump -i eth0
+tcpdump: listening on eth0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+14:03:01.123456 IP 192.168.1.50.54321 &gt; 93.184.216.34.443: Flags [S], seq 1234567, win 64240, length 0
+…</pre>
+
+<hr>
+
+<h2>Como se proteger</h2>
+<ul>
+  <li><strong>Mitigação na borda</strong>: use uma <a href="cdn.html">CDN</a> (Cloudflare, Akamai…) ou o serviço de proteção da sua operadora — o tráfego sujo é filtrado nos PoPs/"scrubbing centers" antes de chegar no seu servidor;</li>
+  <li><strong>Anycast</strong>: o mesmo IP do seu serviço é anunciado em vários pontos do mundo (como vimos de DNS na aula de CDN) — o ataque se dilui e cada ponto recebe só uma fração;</li>
+  <li><strong>Rate limiting</strong>: limite de requisições por IP/segundo no <a href="proxy-reverso.html">proxy reverso</a>/firewall (ex.: no nginx, <code>limit_req_zone</code>);</li>
+  <li><strong>WAF</strong>: firewall de aplicação que filtra requisições maliciosas de DDoS L7 (e também os ataques da aula <a href="seguranca-web.html">OWASP</a>);</li>
+  <li><strong>Não exponha o IP real</strong>: deixe o servidor de origem atrás da CDN/proxy e permita conexões só vindas dos IPs da CDN no seu <a href="firewall-iptables.html">firewall</a> — se descobrirem o IP real, atacam direto nele ("bypass de CDN");</li>
+  <li><strong>Capacidade extra</strong>: tenha largura de banda e servidores com folga (auto scaling na nuvem);</li>
+  <li><strong>Plano de resposta</strong>: quem liga para a operadora, quem avisa os clientes, onde ficam os logs, como comunica o incidente.</li>
+</ul>
+
+<div class="warning">
+<strong>Durante um ataque: o que fazer e o que NÃO fazer</strong>
+<p>✅ Mantenha a calma e ative o plano de resposta; ✅ avise sua operadora/CDN imediatamente (eles têm botões de mitigação); ✅ preserve os logs (tcpdump, logs do servidor) para perícia e boletim de ocorrência; ✅ comunique os usuários pelo status page. ❌ <strong>Não tente "contra-atacar"</strong> a botnet — é crime e não funciona; ❌ não desligue tudo achando que resolve (quem precisa do serviço fica sem ele e o atacante vence); ❌ não mude o DNS para um IP "secreto" às cegas — o atacante segue o novo IP se conseguir descobri-lo.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>DDoS = milhares de máquinas (botnet) mandando tráfego ao mesmo tempo para derrubar um serviço — como milhões de ligações numa central pequena.</li>
+  <li>Tipos: <strong>volumétrico</strong> (esgota banda), de <strong>protocolo</strong> (SYN flood, esgota conexões) e de <strong>aplicação</strong> (L7, esgota CPU do servidor).</li>
+  <li>Defesa: mitigação na borda (CDN/operadora), anycast, rate limiting, WAF, IP real escondido atrás da CDN, folga de capacidade e plano de resposta.</li>
+  <li>Na hora do ataque: acione a operadora, preserve logs, comunique — e nunca contra-ataque.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="seguranca-web.html">Segurança web: OWASP Top 10</a> — agora que a rede está protegida, vamos ver as 10 falhas mais comuns em aplicações web.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

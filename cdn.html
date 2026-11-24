@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CDN: cópias do seu site perto do usuário | Guia Redes</title>
+<meta name="description" content="CDN (Content Delivery Network) explicada com a analogia das franquias de padaria: pontos de presença (PoPs) perto do usuário servindo cópias em cache. Como o DNS escolhe o PoP mais próximo (anycast), TTL, cache hit/miss, origin, invalidação (purge), o que pode e o que não pode ir para CDN. Tabela com CDN × sem CDN e missão com dig +short no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">CDN</span>: cópias do seu site perto do usuário</h1>
+
+<p class="intro">Se o seu site mora num servidor só em São Paulo, quem mora no Amazonas espera a resposta atravessar o país inteiro. E se esse servidor cair ou lotar, o site inteiro sai do ar. A solução das grandes empresas: <strong>franquias</strong>. Em vez de uma padaria só, cada cidade tem uma padaria local com o mesmo bolo — isso é a <strong>CDN</strong> (Content Delivery Network): cópias do seu conteúdo em servidores espalhados pelo mundo, perto de quem acessa.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é uma CDN e o que são os <strong>PoPs</strong> (pontos de presença) de borda;</li>
+  <li>Como o <strong>DNS</strong> manda cada usuário para o PoP mais próximo (anycast);</li>
+  <li><strong>Cache hit/miss</strong>, TTL e o servidor de origem (origin);</li>
+  <li>Invalidação (purge) e o que pode/não pode ir para a CDN;</li>
+  <li>Tabela comparativa: com CDN × sem CDN.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Como funciona</h2>
+<p>Uma CDN (Cloudflare, Fastly, Akamai, CloudFront…) tem <strong>dezenas de servidores próprios</strong> em cidades do mundo — os <strong>PoPs</strong> (Pontos de Presença). Quando você acessa um site que usa CDN:</p>
+
+<pre class="term">1. Você digita exemplo.com → o DNS responde com o IP do PoP MAIS PRÓXIMO de você
+   (não o do servidor original!)
+2. Seu pedido chega nesse PoP de borda.
+3. Se o conteúdo estiver no cache do PoP (HIT) → responde na hora, em milissegundos.
+4. Se não estiver (MISS) → o PoP busca no servidor de origem (origin), guarda uma cópia
+   (respeitando o TTL) e devolve para você.</pre>
+
+<p>O truque do passo 1 é o <strong>anycast</strong>: o mesmo IP é anunciado em vários PoPs e o BGP (aula <a href="bgp-intro.html">BGP</a>) leva seu pacote até o PoP mais próximo na topologia de rede. Você nem percebe — mas foi atendido por um servidor a poucos quilômetros, não do outro lado do país.</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>Sem CDN (só a origem)</th><th>Com CDN</th></tr>
+<tr><td>Distância</td><td>Todo mundo vai até o servidor original</td><td>Cada um vai até o PoP mais perto</td></tr>
+<tr><td>Latência</td><td>Alta para quem está longe (centenas de ms)</td><td>Baixa (geralmente &lt; 50 ms)</td></tr>
+<tr><td>Carga na origem</td><td>100% dos pedidos chegam nela</td><td>Só os "miss" chegam na origem (muitas vezes &lt; 5%)</td></tr>
+<tr><td>Disponibilidade</td><td>Se o servidor cair, o site cai</td><td>Os PoPs continuam servindo o que está em cache; há redundância</td></tr>
+<tr><td>Proteção</td><td>Você sozinho contra ataques</td><td>CDNs absorvem DDoS na borda (aula <a href="ddos.html">DDoS</a>)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Cache, TTL e invalidação</h2>
+<dl class="anatomy">
+  <dt>Cache HIT</dt><dd>O PoP já tinha o arquivo (imagem, CSS, JS, página) e devolveu na hora. É a maioria dos pedidos.</dd>
+  <dt>Cache MISS</dt><dd>O PoP não tinha (ou expirou): busca na origem, guarda e devolve. O primeiro acesso de cada região é MISS.</dd>
+  <dt>TTL</dt><dd>O tempo que a cópia fica válida no cache (vem do servidor, ex.: <code>Cache-Control: max-age=86400</code>). Respeite o TTL: se você mudar o site e o PoP ainda tiver a versão velha, os usuários veem conteúdo antigo até expirar.</dd>
+  <dt>Purge / invalidação</dt><dd>O comando para apagar o cache da CDN na hora ("joga fora todas as cópias desse arquivo agora"). Útil depois de uma atualização urgente — mas tem limite de quantidade por dia na maioria das CDNs.</dd>
+  <dt>Origin</dt><dd>O seu servidor de verdade, escondido atrás da CDN (o proxy reverso da aula <a href="proxy-reverso.html">anterior</a> souvent vira o origin).</dd>
+</dl>
+
+<hr>
+
+<h2>O que vai para a CDN (e o que não vai)</h2>
+<ul>
+  <li><strong>Vai</strong>: imagens, CSS, JS, fontes, vídeos, páginas estáticas ou pouco dinâmicas — qualquer coisa que pode ser copiada sem problema.</li>
+  <li><strong>Não vai</strong>: dados personalizados de usuário (banco de dados, área logada com informações privadas), APIs com dados sensíveis em tempo real. Esses passam direto para a origem (ou nem passam pela CDN).</li>
+  <li><strong>Cuidado</strong>: uma página em cache é <strong>igual para todo mundo</strong> — não cacheie conteúdo privado por engano (ex.: um HTML com o nome do usuário logado).</li>
+</ul>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig exemplo.com +short</code> e veja o IP <code>93.184.216.34</code>. Na vida real, um domínio atendido por CDN devolve <strong>IPs diferentes conforme a sua localização</strong> (o PoP mais perto de você) — rode o mesmo comando de cidades diferentes e compare. Depois rode <code>ping exemplo.com</code> e veja a latência baixa.</p>
+</div>
+
+<div class="warning">
+<strong>Riscos de cache</strong>
+<p>(1) <strong>Conteúdo velho</strong>: respeite o TTL e use purge com moderação. (2) <strong>Cache de dados privados</strong>: se o seu site salva "usuário logado" em cookie e a CDN cacheia a página, outro usuário pode receber <em>a sua página</em>. (3) <strong>Custo</strong>: CDN cobra por tráfego — um ataque de DDoS que força muitos MISS pode gerar conta salgada (configure para não cachear o que não precisa).</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>CDN = rede de servidores de borda (<strong>PoPs</strong>) com cópias em cache do seu conteúdo, perto dos usuários.</li>
+  <li>O DNS (anycast + BGP) leva cada usuário ao PoP mais próximo; HIT responde na hora, MISS busca na origem e guarda.</li>
+  <li>TTL controla o tempo de validade da cópia; purge invalida na hora. Com CDN: menos latência, menos carga na origem, mais disponibilidade e proteção contra DDoS.</li>
+  <li>Não cacheie dados privados/personalizados.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="load-balancer.html">Load balancer: dividir o tráfego</a> — e se a CDN aproxima o usuário do conteúdo, o load balancer divide os pedidos entre vários servidores.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

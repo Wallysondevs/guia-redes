@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Como o DNS funciona por dentro: servidores raiz, TLD e autoritativo | Guia Redes</title>
+<meta name="description" content="A anatomia da resolução DNS: a hierarquia de servidores (raiz ., TLD .com/.br e autoritativo do domínio), a consulta recursiva passo a passo, o papel do resolver (192.168.1.1 e 8.8.8.8), o cache e o /etc/resolv.conf. Veja o caminho inteiro com dig +trace e faça as missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">DNS a fundo</span> — raiz, TLD e autoritativo</h1>
+
+<p class="intro">Na aula <a href="o-que-e-dns.html">o que é DNS</a> vimos que o DNS traduz nomes em IPs, como uma agenda telefônica. Agora vamos abrir essa agenda: ela é organizada em <strong>três andares</strong> — os servidores <strong>raiz</strong> (.), os de <strong>TLD</strong> (.com, .br, .org…) e os <strong>autoritativos</strong> (os do próprio exemplo.com).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Quem são os servidores raiz, TLD e autoritativo — e o que cada um sabe.</li>
+  <li>A <strong>consulta recursiva</strong>, passo a passo, até chegar no IP.</li>
+  <li>Quem é o <strong>resolver</strong> da máquina da Ana (<code>/etc/resolv.conf</code>) e o que é o cache.</li>
+  <li>Ver o caminho inteiro com <code>dig exemplo.com +trace</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Quem responde as perguntas na máquina da Ana</h2>
+<p>O computador da Ana não sabe todos os IPs do mundo — ele <strong>pergunta a um resolver</strong>. Veja quais estão configurados:</p>
+<pre class="term">$ cat /etc/resolv.conf
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+search localdomain</pre>
+<p>Aqui, o resolver é o <strong>roteador</strong> (192.168.1.1, o gateway da rede dela) e, como reserva, o <strong>8.8.8.8</strong> (o DNS público do Google). Esse resolver faz a busca na internet por você (é a <em>consulta recursiva</em>) e guarda o resultado no <strong>cache</strong> por um tempo.</p>
+
+<div class="try" data-goal="nameserver 8.8.8.8" data-solucao="cat /etc/resolv.conf">
+<p class="try-task"><strong>Missão:</strong> veja quais servidores DNS a máquina da Ana usa: <code>cat /etc/resolv.conf</code></p>
+</div>
+
+<hr>
+
+<h2>A consulta passo a passo</h2>
+<p>Quando a Ana digita <code>exemplo.com</code> no navegador, acontece isto:</p>
+<ol>
+  <li><code>ana@notebook</code> pergunta ao resolver (192.168.1.1): <em>"qual o IP de exemplo.com?"</em></li>
+  <li>O resolver não sabe de cor, então pergunta a um servidor <strong>raiz</strong>: <em>"quem cuida de .com?"</em> → resposta: os servidores TLD <code>a.gtld-servers.net</code>.</li>
+  <li>O resolver pergunta ao TLD <strong>.com</strong>: <em>"quem cuida de exemplo.com?"</em> → resposta: <code>ns1.exemplo.com</code>.</li>
+  <li>O resolver pergunta ao servidor <strong>autoritativo</strong> <code>ns1.exemplo.com</code>: <em>"qual o registro A de exemplo.com?"</em> → resposta: <code>93.184.216.34</code>.</li>
+  <li>O resolver devolve o IP para a Ana <strong>e guarda no cache</strong> por um tempo (o TTL — aula <a href="propagacao-dns.html">TTL e propagação</a>).</li>
+</ol>
+<p>Analogia: é como numa biblioteca de 3 andares — no 1º você descobre onde fica a seção ".com", no 2º quem cuida de "exemplo.com", e no 3º você pega o número de telefone de verdade.</p>
+
+<hr>
+
+<h2>Vendo o caminho inteiro: dig +trace</h2>
+<p>O <code>dig +trace</code> mostra cada salto dessa jornada — raiz, TLD e autoritativo:</p>
+<pre class="term">$ dig exemplo.com +trace
+; &lt;&lt;&gt;&gt; DiG 9.18 &lt;&lt;&gt;&gt; +trace exemplo.com
+;; global options: +cmd
+.                       518400  IN  NS  a.root-servers.net.
+;; Received 239 bytes from 192.168.1.1#53(192.168.1.1) in 4 ms
+
+com.                    172800  IN  NS  a.gtld-servers.net.
+
+exemplo.com.            86400   IN  NS  ns1.exemplo.com.
+
+exemplo.com.            3600    IN  A   93.184.216.34
+;; Query time: 38 msec
+;; SERVER: 8.8.8.8#53(8.8.8.8)</pre>
+<p>E a consulta normal, só com a resposta final:</p>
+<pre class="term">$ dig exemplo.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 4821
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;exemplo.com.           IN      A
+
+;; ANSWER SECTION:
+exemplo.com.            3600    IN      A       93.184.216.34
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> pegue só o IP de exemplo.com: <code>dig exemplo.com +short</code></p>
+</div>
+
+<div class="try" data-goal="root-servers" data-solucao="dig exemplo.com +trace">
+<p class="try-task"><strong>Missão:</strong> veja a jornada completa da raiz até o autoritativo: <code>dig exemplo.com +trace</code> — ache os <code>root-servers</code></p>
+</div>
+
+<div class="try" data-goal="ANSWER SECTION" data-solucao="dig exemplo.com">
+<p class="try-task"><strong>Missão:</strong> faça a consulta normal e ache a seção de resposta: <code>dig exemplo.com</code></p>
+</div>
+
+<div class="warning">
+<strong>Diagnóstico rápido:</strong> se a internet "parou" mas o cabo está bom, teste <code>ping 8.8.8.8</code> (IP direto, não precisa de DNS) e <code>ping exemplo.com</code> (precisa de DNS). Se o IP responde e o nome não, o problema é DNS — confira o <code>/etc/resolv.conf</code> e tente <code>dig @8.8.8.8 exemplo.com</code>.
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">Na resolução de <code>exemplo.com</code>, quem responde de verdade o IP final (o registro A)?</p>
+<label><input type="radio" name="q1"> O servidor raiz (.)</label>
+<label><input type="radio" name="q1"> O servidor TLD (.com)</label>
+<label><input type="radio" name="q1"> O servidor autoritativo do domínio (<code>ns1.exemplo.com</code>)</label>
+<label><input type="radio" name="q1"> O roteador da rede local</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>O DNS é uma hierarquia de 3 andares: <strong>raiz</strong> (.) → <strong>TLD</strong> (.com) → <strong>autoritativo</strong> (ns1.exemplo.com).</li>
+  <li>Seu computador não sabe tudo: ele pergunta a um <strong>resolver</strong> (aqui 192.168.1.1 e 8.8.8.8 — veja em <code>/etc/resolv.conf</code>), que faz a busca recursiva e guarda no cache.</li>
+  <li><code>dig exemplo.com</code> mostra a resposta final; <code>dig exemplo.com +trace</code> mostra cada salto; <code>+short</code> mostra só o IP.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="registros-dns.html">Registros DNS: A, AAAA, CNAME, MX, TXT, NS, SOA</a> — os "campos" da agenda de cada domínio.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

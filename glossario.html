@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glossário de redes A–Z — todos os termos explicados em português | Guia Redes</title>
+<meta name="description" content="Glossário do Guia Redes em ordem alfabética: ARP, banda, cliente-servidor, DNS, DHCP, encapsulamento, firewall, gateway, handshake, header, hop, HTTP, HTTPS, ICMP, IP, IPv4, IPv6, latência, MAC, máscara, NAT, pacote, ping, porta, protocolo, proxy, registro DNS, rota, roteador, servidor, socket, sub-rede, TCP, TTL, UDP, URL, VPN — definição clara e exemplo na máquina ana@notebook (192.168.1.50).">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Glossário</span> de redes, de A a Z</h1>
+
+<p class="intro">Todo guia de redes usa os mesmos termos o tempo inteiro — e eles voltam em todo canto: nos comandos, nos erros, nas conversas de trabalho. Este glossário reúne os <strong>termos essenciais em ordem alfabética</strong>, com definição em português claro e, quando faz sentido, um exemplo na máquina da Ana (<code>ana@notebook</code>, IP <code>192.168.1.50</code>). Consulte sempre que um termo novo aparecer.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Endereçamento: <strong>IP</strong>, <strong>IPv4</strong>, <strong>IPv6</strong>, <strong>MAC</strong>, <strong>máscara</strong>, <strong>sub-rede</strong>, <strong>CIDR</strong>.</li>
+  <li>Conexão e transporte: <strong>porta</strong>, <strong>socket</strong>, <strong>TCP</strong>, <strong>UDP</strong>, <strong>handshake</strong>, <strong>TTL</strong>, <strong>latência</strong>.</li>
+  <li>Aplicação: <strong>DNS</strong>, <strong>DHCP</strong>, <strong>HTTP/HTTPS</strong>, <strong>header</strong>, <strong>URL</strong>, <strong>proxy</strong>, <strong>VPN</strong>.</li>
+  <li>Diagnóstico: <strong>ping</strong>, <strong>traceroute</strong> (<em>hop</em>), <strong>pacote</strong>, <strong>ARP</strong>, <strong>rota/gateway</strong>, <strong>NAT</strong>, <strong>firewall</strong>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Os termos, de A a Z</h2>
+<dl class="glossario">
+
+  <dt><strong>ARP (Address Resolution Protocol)</strong></dt>
+  <dd>Protocolo que traduz IP em endereço MAC na rede local: "quem tem o IP 192.168.1.60?" → "eu, meu MAC é 66:77:88:99:aa:bb". Veja com <code>arp -a</code>. É a <strong>lista de vizinhos do corredor</strong>.</dd>
+
+  <dt><strong>Banda (largura de banda)</strong></dt>
+  <dd>Capacidade máxima de transferência de um link, medida em bits por segundo (Mbps/Gbps). É a <strong>largura da estrada</strong>: não muda a velocidade do carro, muda quantos carros passam por segundo.</dd>
+
+  <dt><strong>Cliente-servidor</strong></dt>
+  <dd>O modelo da internet: o <strong>cliente</strong> (seu navegador) <em>pede</em>; o <strong>servidor</strong> (um computador na rede) <em>atende</em>. O servidor fica ouvindo numa porta (ex.: 443) esperando pedidos.</dd>
+
+  <dt><strong>CIDR (Classless Inter-Domain Routing)</strong></dt>
+  <dd>A notação <code>/24</code> depois do IP (ex.: <code>192.168.1.50/24</code>): diz quantos bits são da rede. <code>/24</code> = 256 endereços (192.168.1.0–255).</dd>
+
+  <dt><strong>DHCP</strong></dt>
+  <dd>Protocolo que entrega IP automático para os dispositivos da rede (portas UDP 67/68). Foi o DHCP do roteador que deu <code>192.168.1.50</code> ao notebook da Ana — sem ele, cada máquina teria que ser configurada na mão.</dd>
+
+  <dt><strong>DNS (Domain Name System)</strong></dt>
+  <dd>O sistema que traduz nomes em IPs — a <strong>agenda telefônica da internet</strong> (porta 53, TCP e UDP). <code>exemplo.com</code> → <code>93.184.216.34</code>. Consulte com <code>dig</code> e <code>nslookup</code>; apelidos locais ficam no <code>/etc/hosts</code>.</dd>
+
+  <dt><strong>Encapsulamento</strong></dt>
+  <dd>Cada camada da rede embrulha os dados da camada de cima num "envelope" próprio (HTTP dentro de TCP dentro de IP dentro de Ethernet). É como mandar uma carta dentro de um pacote dentro de uma caixa.</dd>
+
+  <dt><strong>Firewall</strong></dt>
+  <dd>O "porteiro" da rede: filtra pacotes por IP, porta e protocolo, decidindo o que entra e sai. O notebook da Ana bloqueia a 8000 de fora, mas deixa o navegador acessar — aula <a href="firewall-iptables.html">firewall</a>.</dd>
+
+  <dt><strong>Gateway (gateway padrão)</strong></dt>
+  <dd>O endereço para onde vão os pacotes que não são da rede local — o "portão para fora do condomínio". No notebook da Ana é <code>192.168.1.1</code> (veja <code>ip route</code>: <code>default via 192.168.1.1</code>).</dd>
+
+  <dt><strong>Handshake TCP</strong></dt>
+  <dd>A troca de 3 mensagens (SYN → SYN-ACK → ACK) que abre uma conexão TCP antes de mandar dados — como um "alô? pode falar? pode" antes da conversa. Aula <a href="handshake-tcp.html">handshake</a>.</dd>
+
+  <dt><strong>Header (cabeçalho)</strong></dt>
+  <dd>Linhas <code>Nome: valor</code> no início de um pedido/resposta HTTP (e de outros protocolos) — o "envelope" da mensagem. Ex.: <code>Host: exemplo.com</code>, <code>Content-Type: application/json</code>. Veja a cola de <a href="ref-headers.html">headers</a>.</dd>
+
+  <dt><strong>Hop (salto)</strong></dt>
+  <dd>Cada roteador que um pacote atravessa até o destino. O <code>traceroute</code> lista os saltos: 192.168.1.1 → 189.50.10.1 → … → 93.184.216.34.</dd>
+
+  <dt><strong>HTTP / HTTPS</strong></dt>
+  <dd>O protocolo da web: pedidos (GET, POST…) e respostas (status 200, 404…) em texto, na porta 80. O <strong>HTTPS</strong> é o mesmo protocolo na porta 443, criptografado por TLS — cadeado verde no navegador.</dd>
+
+  <dt><strong>ICMP</strong></dt>
+  <dd>Protocolo de mensagens de controle da rede (não manda dados de app). O <code>ping</code> usa ICMP (echo request/reply) para testar se o host responde; o <code>traceroute</code> usa o TTL do ICMP/IP.</dd>
+
+  <dt><strong>IP (Internet Protocol)</strong></dt>
+  <dd>O protocolo que endereça e roteia pacotes na internet. Cada máquina tem um IP único na rede — o notebook da Ana é <code>192.168.1.50</code> (veja <code>ip addr</code>).</dd>
+
+  <dt><strong>IPv4</strong></dt>
+  <dd>A versão 4 do IP: 4 números de 0–255 (ex.: <code>192.168.1.50</code>), ~4,3 bilhões de endereços. É o que o guia usa nos exemplos.</dd>
+
+  <dt><strong>IPv6</strong></dt>
+  <dd>A versão 6 do IP: 8 grupos hexadecimais (ex.: <code>2001:0db8::1</code>), com endereços praticamente infinitos. Registro DNS desse tipo é o <code>AAAA</code>.</dd>
+
+  <dt><strong>Latência</strong></dt>
+  <dd>O tempo que um pacote leva para ir e voltar (medido em ms). O ping mostra: <code>time=23.4 ms</code>. Não é banda — é o <strong>atraso</strong> (a distância + filas no caminho).</dd>
+
+  <dt><strong>MAC (endereço físico)</strong></dt>
+  <dd>O endereço gravado na placa de rede (ex.: <code>aa:bb:cc:dd:ee:ff</code>), único no mundo, usado só na rede local (camada 2). Veja em <code>ip addr</code> como <code>link/ether</code>.</dd>
+
+  <dt><strong>Máscara de sub-rede</strong></dt>
+  <dd>Diz quais bits do IP são da rede e quais são da máquina. <code>255.255.255.0</code> = <code>/24</code>: os 3 primeiros números são a rede (192.168.1.x), o último é a máquina.</dd>
+
+  <dt><strong>NAT (Network Address Translation)</strong></dt>
+  <dd>A tradução de endereços que o roteador faz: os dispositivos da casa usam IPs privados (192.168.1.x) e o roteador troca pelo IP público ao sair para a internet — como um <strong>balcão de correspondências</strong> do prédio.</dd>
+
+  <dt><strong>Pacote</strong></dt>
+  <dd>A unidade de dados que viaja na rede: um envelope (IP) com um segmento (TCP/UDP) dentro, que carrega um pedaço da sua mensagem (HTTP). O <code>tcpdump</code> mostra os pacotes um a um.</dd>
+
+  <dt><strong>Ping</strong></dt>
+  <dd>O comando de teste mais famoso: manda ICMP echo e mede se o host responde e em quanto tempo (<code>64 bytes from … time=23.4 ms</code>). "Pingar" virou sinônimo de "testar se está no ar".</dd>
+
+  <dt><strong>Porta</strong></dt>
+  <dd>O número (0–65535) que identifica um serviço dentro de um IP — a <strong>sala do prédio</strong>. Web = 80/443, SSH = 22, DNS = 53. Veja <code>ss -tlnp</code> e a cola de <a href="ref-portas.html">portas</a>.</dd>
+
+  <dt><strong>Protocolo</strong></dt>
+  <dd>O conjunto de regras que dois lados seguem para conversar: TCP, UDP, IP, HTTP, DNS, TLS… Cada um define o formato das mensagens e a ordem delas.</dd>
+
+  <dt><strong>Proxy</strong></dt>
+  <dd>Um intermediário que faz pedidos em nome de outra máquina — filtra, cacheia ou esconde a origem (proxy direto) ou esconde o destino (proxy reverso, na frente de servidores). Aula <a href="proxy-reverso.html">proxy reverso</a>.</dd>
+
+  <dt><strong>Registro DNS</strong></dt>
+  <dd>Um "cartão" na agenda do DNS: <code>A</code> (IPv4), <code>AAAA</code> (IPv6), <code>CNAME</code> (apelido), <code>MX</code> (e-mail), <code>TXT</code> (texto), <code>NS</code>, <code>SOA</code>, <code>PTR</code>. Cola em <a href="ref-registros-dns.html">registros DNS</a>.</dd>
+
+  <dt><strong>Rota</strong></dt>
+  <dd>O caminho que um pacote segue até o destino, decidido pela tabela de rotas de cada máquina/roteador (<code>ip route</code>). A rota padrão (<code>default</code>) manda o resto para o gateway.</dd>
+
+  <dt><strong>Roteador</strong></dt>
+  <dd>O equipamento que conecta redes diferentes e encaminha pacotes entre elas (faz o papel de gateway). O roteador de casa da Ana é o <code>192.168.1.1</code>.</dd>
+
+  <dt><strong>Servidor</strong></dt>
+  <dd>Um programa (ou máquina) que fica ouvindo numa porta e atende pedidos — o oposto do cliente. Ex.: o <code>python3 -m http.server 8000</code> do projeto 1 é um servidor web na porta 8000.</dd>
+
+  <dt><strong>Socket</strong></dt>
+  <dd>O par <code>IP:porta</code> que identifica uma ponta de uma conexão (ex.: <code>192.168.1.50:54321 ↔ 93.184.216.34:443</code>). O comando <code>ss</code> lista os sockets da máquina (<em>socket statistics</em>).</dd>
+
+  <dt><strong>Sub-rede</strong></dt>
+  <dd>Um pedaço de uma rede IP (ex.: <code>192.168.1.0/24</code> = 256 IPs). Quem está na mesma sub-rede fala direto; para sair dela, passa pelo gateway.</dd>
+
+  <dt><strong>TCP</strong></dt>
+  <dd>Protocolo de transporte <strong>confiável e orientado a conexão</strong>: handshake antes, confirmação de entrega, reenvio se perder (a carta registrada). Usado por HTTP/HTTPS, SSH, e-mail. Aula <a href="tcp-vs-udp.html">TCP vs UDP</a>.</dd>
+
+  <dt><strong>TTL (Time To Live)</strong></dt>
+  <dd>Campo do pacote IP que conta quantos roteadores ele ainda pode atravessar (evita pacote ficar rodando para sempre). No ping aparece como <code>ttl=64</code>; no DNS, é o tempo de cache do registro.</dd>
+
+  <dt><strong>UDP</strong></dt>
+  <dd>Protocolo de transporte <strong>sem conexão e sem garantia de entrega</strong> — rápido e leve (a carta simples, sem aviso de recebimento). Usado por DNS, streaming, jogos, VoIP.</dd>
+
+  <dt><strong>URL</strong></dt>
+  <dd>O endereço completo de um recurso na web: <code>https://exemplo.com:443/caminho?busca=1</code> = protocolo + domínio + porta + caminho + consulta. Aula <a href="anatomia-url.html">anatomia da URL</a>.</dd>
+
+  <dt><strong>VPN</strong></dt>
+  <dd>Rede privada virtual: um túnel criptografado dentro da internet, ligando máquinas distantes como se estivessem na mesma rede local. Aula <a href="vpn.html">VPN</a>.</dd>
+
+</dl>
+
+<hr>
+
+<h2>Os pares que mais confundem</h2>
+<ul>
+  <li><strong>IP × MAC:</strong> IP é o endereço lógico na internet (muda de rede); MAC é o endereço físico da placa, só vale na rede local.</li>
+  <li><strong>TCP × UDP:</strong> TCP confirma entrega (confiável, mais lento); UDP manda e esquece (rápido, sem garantia).</li>
+  <li><strong>DNS × /etc/hosts:</strong> o hosts é a agenda local do seu computador (consultada antes); o DNS é a agenda da internet.</li>
+  <li><strong>Porta 80 × porta 443:</strong> HTTP (texto puro) × HTTPS (criptografado).</li>
+  <li><strong>Gateway × DNS:</strong> gateway é para onde vão os pacotes de fora da rede local; DNS é quem traduz nomes em IPs (muitas vezes os dois são o mesmo roteador, como o 192.168.1.1).</li>
+  <li><strong>404 × "site fora do ar":</strong> 404 significa que a conexão funcionou e o servidor respondeu — só a página não existe. "Fora do ar" é <code>curl: (7) Connection refused</code> ou timeout no ping.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="problemas.html">Problemas comuns de rede e soluções</a> — DNS NXDOMAIN, connection refused, timeout, porta em uso: o que cada erro significa e como consertar.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

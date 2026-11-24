@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Problemas comuns de rede e soluções — NXDOMAIN, connection refused, timeout, porta em uso | Guia Redes</title>
+<meta name="description" content="Guia de troubleshooting de rede: os erros reais que aparecem no terminal — DNS NXDOMAIN (dig/nslookup), Could not resolve host (curl/ping), Connection refused (porta fechada), timeout (host não responde), porta em uso (Address already in use) — com a causa, a solução passo a passo, comandos de diagnóstico (ping, dig, curl -v, traceroute, ss) e missões no terminal simulado para você provocar cada erro de propósito.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Problemas</span> comuns de rede — e como resolver</h1>
+
+<p class="intro">Toda rede dá problema uma hora. A boa notícia: <strong>quase todo erro de rede deixa uma pista no terminal</strong>. Nesta página você encontra os erros mais comuns — com a mensagem exata que eles imprimem, a causa e o conserto. E o melhor: dá para <strong>provocar cada erro de propósito</strong> no terminal simulado abaixo para aprender a reconhecê-los.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O roteiro geral de diagnóstico: <code>ping</code> → <code>dig</code> → <code>curl -v</code> → <code>traceroute</code> → <code>ss</code>.</li>
+  <li><strong>DNS NXDOMAIN</strong> e <code>Could not resolve host</code>: o nome não existe (ou o DNS falhou).</li>
+  <li><strong>Connection refused</strong>: a máquina responde, mas a porta está fechada.</li>
+  <li><strong>Timeout / host não responde</strong>: o caminho até a máquina está bloqueado ou ela está fora.</li>
+  <li><strong>Porta em uso</strong> (<code>Address already in use</code>): outro processo já está na porta.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O roteiro de diagnóstico (sempre nesta ordem)</h2>
+<ol class="passo">
+  <li><code>ping exemplo.com</code> — a máquina responde? (testa ICMP e a rota até ela)</li>
+  <li><code>dig exemplo.com +short</code> — o nome resolve para IP? (testa o DNS)</li>
+  <li><code>curl -v https://exemplo.com</code> — a conversa HTTP acontece? onde quebra? (DNS, TCP, TLS, status)</li>
+  <li><code>traceroute exemplo.com</code> — em qual salto o caminho para?</li>
+  <li><code>ss -tlnp</code> — e aqui na minha máquina, minhas portas estão como deveriam?</li>
+</ol>
+<p>Regra de ouro: um erro em um passo <strong>não significa</strong> que os outros vão falhar — o ping pode falhar (ICMP bloqueado no firewall) e o site abrir normal no navegador.</p>
+
+<hr>
+
+<h2>1. DNS NXDOMAIN — "esse nome não existe"</h2>
+<div class="warning"><strong>Erro real:</strong> <code>dig naoexiste.com</code> → <code>;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN</code> (e no nslookup: <code>** server can't find naoexiste.com: NXDOMAIN</code>)</div>
+<p><strong>Causa:</strong> o domínio não está registrado no DNS (erro de digitação, domínio expirado, ou registro ainda propagando). <strong>Solução:</strong> confira a grafia; teste com outro DNS (<code>dig @8.8.8.8 exemplo.com</code>) para saber se o problema é o seu DNS local; se for seu domínio, veja o painel do registrador.</p>
+<pre class="term">$ dig naoexiste.com
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 4821
+;; QUESTION SECTION:
+;naoexiste.com.                 IN      A
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+
+<div class="try" data-goal="NXDOMAIN" data-solucao="dig naoexiste.com">
+<p class="try-task"><strong>Missão:</strong> provoque o erro: rode <code>dig naoexiste.com</code> e veja <code>NXDOMAIN</code> no status.</p>
+</div>
+
+<hr>
+
+<h2>2. Could not resolve host — curl/ping não acham o nome</h2>
+<div class="warning"><strong>Erro real:</strong> <code>curl: (6) Could not resolve host: naoexiste.com</code> · <code>ping: cannot resolve naoexiste.com: Name or service not known</code> · <code>wget: unable to resolve host address</code></div>
+<p><strong>Causa:</strong> mesma do NXDOMAIN — o DNS não conseguiu traduzir o nome (nome errado, DNS fora do ar, ou <code>/etc/resolv.conf</code> sem servidor). <strong>Solução:</strong> teste o DNS em si (<code>cat /etc/resolv.conf</code>, <code>dig @8.8.8.8 google.com +short</code>); se o DNS local morreu, troque temporariamente para <code>8.8.8.8</code>; se o nome estiver certo e mesmo assim falhar, pode ser o domínio fora do ar (confira com <code>dig @8.8.8.8</code>).</p>
+
+<div class="try" data-goal="Could not resolve host" data-solucao="curl naoexiste.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl naoexiste.com</code> e veja o erro <code>curl: (6) Could not resolve host</code>.</p>
+</div>
+
+<div class="try" data-goal="cannot resolve" data-solucao="ping naoexiste.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>ping naoexiste.com</code> e veja <code>ping: cannot resolve naoexiste.com</code>.</p>
+</div>
+
+<hr>
+
+<h2>3. Connection refused — a porta está fechada</h2>
+<div class="warning"><strong>Erro real:</strong> <code>curl: (7) Failed to connect to exemplo.com port 8080 after 2 ms: Connection refused</code> · <code>nc: connect to localhost 9999 port [tcp/*] failed: Connection refused</code></div>
+<p><strong>Causa:</strong> a máquina <em>respondeu</em> (a rede até ela está OK), mas <strong>ninguém está ouvindo naquela porta</strong> — o serviço desligou ou está em outra porta. <strong>Solução:</strong> verifique a porta certa (na máquina local: <code>ss -tlnp</code>; na remota: <code>nc -zv HOST PORTA</code> ou <code>nmap HOST</code>); se for seu servidor, suba o serviço (<code>python3 -m http.server 8000</code>) ou veja os logs dele.</p>
+
+<div class="try" data-goal="parece fechado" data-solucao="nc -zv exemplo.com 22">
+<p class="try-task"><strong>Missão:</strong> teste uma porta fechada num host que responde: rode <code>nc -zv exemplo.com 22</code> (o exemplo.com só abre 80 e 443) e veja o aviso de porta fechada.</p>
+</div>
+
+<hr>
+
+<h2>4. Timeout — o host não responde (ou o caminho está bloqueado)</h2>
+<div class="warning"><strong>Erro real:</strong> <code>ping: sendmsg: Operation not permitted</code> / <code>100% packet loss</code> · <code>curl: (28) Connection timed out after 10001 ms</code> · <code>traceroute</code> mostra <code>* * *</code> nos últimos saltos · <code>dig</code>: <code>;; connection timed out; no servers could be reached</code></div>
+<p><strong>Causa:</strong> o host está desligado, o firewall bloqueou o ICMP/porta no caminho, ou a rota quebrou num salto intermediário. <strong>Solução:</strong> rode <code>traceroute</code> para achar o último salto que responde (o problema está depois dele); teste de outra rede (4G do celular) para saber se é do seu lado; se for seu servidor, verifique se está ligado e o firewall (<code>iptables -L</code>).</p>
+<pre class="term">$ ping -c 2 192.168.1.99
+PING 192.168.1.99 (192.168.1.99) 56(84) bytes of data.
+--- 192.168.1.99 ping statistics ---
+2 packets transmitted, 0 received, 100% packet loss
+$ traceroute exemplo.com
+ 1  192.168.1.1      2.1 ms  2.3 ms  2.0 ms
+ 2  189.50.10.1      8.4 ms  8.1 ms  8.9 ms
+ 3  * * *            « daqui para frente, ninguém responde</pre>
+
+<div class="try" data-goal="traceroute to" data-solucao="traceroute exemplo.com">
+<p class="try-task"><strong>Missão:</strong> veja o caminho até um host: rode <code>traceroute exemplo.com</code> e conte os saltos (192.168.1.1 → … → 93.184.216.34).</p>
+</div>
+
+<hr>
+
+<h2>5. Porta em uso — "Address already in use"</h2>
+<div class="warning"><strong>Erro real:</strong> <code>python3 -m http.server 8000</code> rodado duas vezes → <code>OSError: [Errno 98] Address already in use</code> · <code>Bind for 0.0.0.0:8080 failed: port is already allocated</code></div>
+<p><strong>Causa:</strong> outro processo já está ouvindo naquela porta. <strong>Solução:</strong> ache quem é com <code>ss -tlnp | grep :8000</code> (a coluna Process mostra o nome e o PID); mate o processo antigo (<kbd>Ctrl</kbd>+<kbd>C</kbd> no terminal dele, ou <code>kill PID</code>) ou use outra porta (<code>python3 -m http.server 8001</code>).</p>
+
+<div class="try" data-goal="LISTEN" data-solucao="ss -tlnp">
+<p class="try-task"><strong>Missão:</strong> rode <code>ss -tlnp</code> e veja quem está ocupando as portas 22 e 8000 (estado LISTEN + processo).</p>
+</div>
+
+<hr>
+
+<h2>6. "O site não abre" — checklist completo</h2>
+<pre class="term">$ ping exemplo.com                  « 1. ICMP responde?
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+$ dig exemplo.com +short            « 2. DNS traduz?
+93.184.216.34
+$ curl -v https://exemplo.com       « 3. HTTP chega? status?
+* Connected to exemplo.com (93.184.216.34) port 443
+&lt; HTTP/2 200
+$ traceroute exemplo.com            « 4. rota ok até o fim?
+$ ss -tlnp                          « 5. e aqui dentro, minhas portas?</pre>
+<p>Interpretação rápida: falhou no 1 e no 2 → DNS ou digitação; falhou no 1 mas o 3 funciona → só ICMP bloqueado (normal); falhou no 3 com <code>(6)</code> → DNS; com <code>(7)</code> → porta fechada/firewall; com <code>(28)</code> → timeout; status 5xx → problema no servidor.</p>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><code>NXDOMAIN</code> / <code>Could not resolve host</code> = o <strong>nome</strong> não existe no DNS (teste com <code>dig @8.8.8.8</code>).</li>
+  <li><code>Connection refused</code> = a máquina responde, mas a <strong>porta está fechada</strong> (veja <code>ss -tlnp</code> / <code>nc -zv</code>).</li>
+  <li><code>Timeout</code> / <code>100% packet loss</code> = <strong>ninguém responde</strong> no caminho (use <code>traceroute</code> para achar onde para).</li>
+  <li><code>Address already in use</code> = <strong>porta ocupada</strong> por outro processo (ache com <code>ss -tlnp</code>).</li>
+  <li>Roteiro: <code>ping</code> → <code>dig</code> → <code>curl -v</code> → <code>traceroute</code> → <code>ss</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="quiz.html">Quiz de redes</a> — 10 perguntas de múltipla escolha para testar o que ficou: IP, portas, DNS, HTTP, comandos e diagnóstico.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

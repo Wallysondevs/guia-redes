@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projeto 2 — testar uma API pública com curl e dig | Guia Redes</title>
+<meta name="description" content="Projeto prático de redes: descubra o IP de api.exemplo.com com dig +short, consuma a API com curl -i (HTTP/2 200 e JSON de usuários), veja um 404 real (usuário inexistente), mande um POST com -d e leia os headers com -v. Passo a passo com saída realista e missões no terminal simulado da máquina ana@notebook.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Projeto 2 — <span class="hl">API pública</span> com curl + dig</h1>
+
+<p class="intro">No projeto 1 o servidor estava na sua própria máquina. Agora a Ana vai falar com um servidor <strong>do outro lado do mundo</strong>: uma API pública. Pense numa API como num <strong>balcão de pedidos</strong>: você não entra na cozinha — manda o pedido por uma URL (com um método, tipo <code>GET</code> ou <code>POST</code>) e recebe uma resposta com status e um JSON. Primeiro a gente descobre o endereço (DNS), depois faz o pedido (HTTP).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O fluxo completo para chamar uma API: <code>dig</code> (qual o IP?) → <code>curl</code> (qual a resposta?).</li>
+  <li><code>dig api.exemplo.com +short</code> — só o IP, sem enfeite.</li>
+  <li><code>curl -i https://api.exemplo.com/usuarios</code> — status <code>HTTP/2 200</code> + JSON no corpo.</li>
+  <li>Um <strong>404 real</strong>: <code>curl -i https://api.exemplo.com/usuarios/999</code>.</li>
+  <li>Enviar dados com <code>curl -X POST -d '{...}'</code> e espiar a conversa com <code>curl -v</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Passo 1 — descobrir o IP (DNS)</h2>
+<p>Antes de bater na porta, o computador precisa traduzir o nome <code>api.exemplo.com</code> num IP. É o trabalho do DNS — a <strong>agenda telefônica da internet</strong>. O <code>dig ... +short</code> responde só com o IP, ideal para scripts:</p>
+<pre class="term">$ dig api.exemplo.com +short
+93.184.216.35</pre>
+
+<div class="try" data-goal="93.184.216.35" data-solucao="dig api.exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> rode <code>dig api.exemplo.com +short</code> e anote o IP da API.</p>
+</div>
+
+<hr>
+
+<h2>Passo 2 — chamar a API (GET) e ler o status</h2>
+<p>Agora o pedido: <code>GET /usuarios</code> na porta 443 (HTTPS). Com <code>-i</code>, o curl mostra os headers — a primeira linha é o status. <code>200</code> significa "deu certo, aqui está o corpo".</p>
+<pre class="term">$ curl -i https://api.exemplo.com/usuarios
+HTTP/2 200
+content-type: application/json
+content-length: 87
+
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]</pre>
+<p>Repare no header <code>content-type: application/json</code>: ele avisa que o corpo <strong>não é HTML</strong>, é JSON — dados estruturados que um programa consegue ler (a aula <a href="o-que-e-http.html">HTTP</a> explica os métodos e a aula <a href="headers-http.html">headers</a> detalha cada campo).</p>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://api.exemplo.com/usuarios</code> e confirme o <code>200</code> na primeira linha, com o JSON dos usuários no corpo.</p>
+</div>
+
+<hr>
+
+<h2>Passo 3 — provoquer um 404 (recurso que não existe)</h2>
+<p>Peça um usuário que não existe. Agora o status é <code>404 Not Found</code> — " pedi, o servidor foi lá, mas não achou". Isso <strong>não é erro de rede</strong>: a conexão funcionou perfeitamente; o recurso é que não existe (veja a <a href="ref-status-http.html">tabela de status</a>).</p>
+<pre class="term">$ curl -i https://api.exemplo.com/usuarios/999
+HTTP/2 404
+content-type: application/json
+
+{"erro":"usuário não encontrado"}</pre>
+
+<div class="try" data-goal="HTTP/2 404" data-solucao="curl -i https://api.exemplo.com/usuarios/999">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://api.exemplo.com/usuarios/999</code> e veja o <code>404</code> com a mensagem de erro em JSON.</p>
+</div>
+
+<hr>
+
+<h2>Passo 4 — enviar dados (POST) e espiar a conversa (-v)</h2>
+<p>Para <strong>criar</strong> um usuário, usa-se o método <code>POST</code> com os dados no corpo (<code>-d</code>). Com <code>-v</code> (verbose), o curl mostra a conversa inteira: a conexão TCP, os headers que <em>envia</em> (linhas com <code>&gt;</code>) e os que <em>recebe</em> (linhas com <code>&lt;</code>) — é a ferramenta de debug mais útil de rede:</p>
+<pre class="term">$ curl -v -X POST -d '{"nome":"Duda"}' https://api.exemplo.com/usuarios
+* Trying 93.184.216.35:443...
+* Connected to api.exemplo.com (93.184.216.35) port 443
+&gt; POST /usuarios HTTP/1.1
+&gt; Host: api.exemplo.com
+&gt; User-Agent: curl/8.5.0
+&gt; Accept: */*
+&gt; Content-Type: application/json
+&gt; Content-Length: 15
+&gt;
+&lt; HTTP/2 201
+&lt; content-type: application/json
+&lt;
+{"id":4,"nome":"Duda"}</pre>
+
+<hr>
+
+<h2>Tabela — opções de curl para APIs</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Opção</th><th>Exemplo</th><th>Para que serve</th></tr>
+<tr><td><code>-i</code></td><td><code>curl -i URL</code></td><td>Mostra os headers da resposta junto com o corpo (o status vem na 1ª linha).</td></tr>
+<tr><td><code>-I</code></td><td><code>curl -I URL</code></td><td>Mostra <strong>só</strong> os headers (faz um HEAD).</td></tr>
+<tr><td><code>-v</code></td><td><code>curl -v URL</code></td><td>Modo falante: mostra conexão, DNS, headers enviados/recebidos.</td></tr>
+<tr><td><code>-X METODO</code></td><td><code>curl -X POST URL</code></td><td>Escolhe o método HTTP (GET, POST, PUT, DELETE…).</td></tr>
+<tr><td><code>-d 'dados'</code></td><td><code>curl -X POST -d '{"nome":"Duda"}' URL</code></td><td>Envia um corpo na requisição (com <code>-d</code>, o padrão vira POST).</td></tr>
+<tr><td><code>-H 'Header: valor'</code></td><td><code>curl -H 'Authorization: Bearer …' URL</code></td><td>Adiciona um header (ex.: token de autenticação).</td></tr>
+</table>
+</div>
+
+<div class="note">
+<strong>Fluxo de bolso para testar qualquer API:</strong>
+<ol class="passo">
+  <li><code>dig api.exemplo.com +short</code> — o nome resolve? qual IP?</li>
+  <li><code>ping api.exemplo.com</code> — a máquina responde?</li>
+  <li><code>curl -i https://api.exemplo.com/…</code> — o serviço HTTP responde? com qual status?</li>
+  <li>Deu erro? <code>curl -v</code> mostra exatamente onde a conversa quebrou (a página <a href="problemas.html">Problemas comuns</a> ajuda a interpretar).</li>
+</ol>
+</div>
+
+<hr>
+
+<h2>Resumo do projeto</h2>
+<ul>
+  <li>Chamar API = DNS (<code>dig +short</code>) + HTTP (<code>curl</code>); o status (<code>200</code>, <code>404</code>…) diz o resultado.</li>
+  <li><code>curl -i</code> mostra headers + corpo; <code>-v</code> mostra a conversa inteira; <code>-X POST -d</code> envia dados.</li>
+  <li><code>content-type: application/json</code> = a resposta é dados, não página.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="projeto-hosts-dns.html">Projeto 3 — DNS local com /etc/hosts + dig</a> — e se você quiser inventar um nome só seu, sem DNS de verdade?</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

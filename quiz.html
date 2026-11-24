@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz de redes — 10 perguntas de múltipla escolha com placar | Guia Redes</title>
+<meta name="description" content="Quiz do Guia Redes com 10 perguntas de múltipla escolha sobre IP e porta, DNS e /etc/hosts, ping e traceroute, curl e status HTTP (200/404), ss e portas em escuta, dig +short, TCP vs UDP, gateway e NAT. Acerte e veja o placar subir — com gabarito comentado e links para as aulas de cada tema.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Quiz</span> de redes</h1>
+
+<p class="intro">Terminou o guia? Hora de <strong>testar o que ficou na cabeça</strong>. São 10 perguntas de múltipla escolha — clique numa opção em cada pergunta e o gabarito aparece na hora (verde = certa, vermelho = errada). Seu placar está logo abaixo e atualiza sozinho a cada acerto.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>IP, porta e URL: o que é cada pedaço de <code>https://exemplo.com:443/caminho</code>.</li>
+  <li>DNS: <code>dig +short</code>, <code>/etc/hosts</code>, NXDOMAIN.</li>
+  <li>HTTP: status 200/404, headers, <code>curl -i</code>.</li>
+  <li>Diagnóstico: <code>ping</code>, <code>traceroute</code>, <code>ss -tlnp</code>, connection refused.</li>
+  <li>Transporte: TCP vs UDP, gateway, NAT.</li>
+</ul>
+</div>
+
+<p id="placar">0 de 10</p>
+
+<div class="warning"><strong>Como funciona:</strong> cada pergunta vale 1 ponto e você pode trocar de resposta quantas vezes quiser — só a última marcada conta para o placar (mas tente acertar de primeira!). Se errar alguma, anote o número: os textos entre as perguntas linkam a aula certa para revisar.</div>
+
+<hr>
+
+<h2>Parte 1 — endereços: IP, porta e URL</h2>
+<p>As três primeiras perguntas são o alicerce: a diferença entre <strong>IP</strong> (o endereço do prédio) e <strong>porta</strong> (a sala), o que cada parte de uma <strong>URL</strong> significa, e o que o <code>ping</code> mede de verdade. Aulas de revisão: <a href="o-que-e-ip.html">O que é IP</a>, <a href="portas.html">Portas</a>, <a href="anatomia-url.html">Anatomia da URL</a> e <a href="comando-ping.html">ping</a>.</p>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">1. Em uma rede, IP e porta são, respectivamente…</p>
+<label><input type="radio" name="q1"> O endereço da máquina e o programa que está rodando nela.</label>
+<label><input type="radio" name="q1"> O endereço do prédio (a máquina na rede) e a sala dentro do prédio (o serviço), como 192.168.1.50:443.</label>
+<label><input type="radio" name="q1"> Dois nomes diferentes para a mesma coisa.</label>
+<label><input type="radio" name="q1"> O protocolo de transporte e o endereço físico da placa de rede.</label>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">2. Na URL <code>https://exemplo.com:443/caminho</code>, o que é <code>/caminho</code>?</p>
+<label><input type="radio" name="q2"> A porta do servidor.</label>
+<label><input type="radio" name="q2"> O protocolo de segurança.</label>
+<label><input type="radio" name="q2"> O recurso (página/arquivo) pedido dentro do servidor.</label>
+<label><input type="radio" name="q2"> O endereço IP do servidor.</label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">3. O que o comando <code>ping exemplo.com</code> mede?</p>
+<label><input type="radio" name="q3"> Se o host responde a pacotes ICMP e em quanto tempo (latência), medido pelas linhas "64 bytes from … time=… ms".</label>
+<label><input type="radio" name="q3"> A velocidade máxima de download do site.</label>
+<label><input type="radio" name="q3"> Quantas portas estão abertas no servidor remoto.</label>
+<label><input type="radio" name="q3"> O endereço MAC do roteador.</label>
+</div>
+
+<hr>
+
+<h2>Parte 2 — DNS e HTTP</h2>
+<p>Agora a agenda da internet e a conversa da web: o que o <code>dig +short</code> imprime, o papel do <code>/etc/hosts</code>, e como ler uma resposta HTTP (status + headers). Aulas: <a href="o-que-e-dns.html">DNS</a>, <a href="arquivo-hosts.html">/etc/hosts</a>, <a href="comando-dig.html">dig</a>, <a href="o-que-e-http.html">HTTP</a> e <a href="comando-curl.html">curl</a>.</p>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">4. O que imprime <code>dig exemplo.com +short</code>?</p>
+<label><input type="radio" name="q4"> A página inicial do site.</label>
+<label><input type="radio" name="q4"> O servidor DNS usado e o tempo de consulta.</label>
+<label><input type="radio" name="q4"> O status NXDOMAIN.</label>
+<label><input type="radio" name="q4"> Só o IP do domínio (ex.: 93.184.216.34), sem o resto da resposta.</label>
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">5. Para que serve o arquivo <code>/etc/hosts</code>?</p>
+<label><input type="radio" name="q5"> Guardar as senhas de Wi-Fi da rede.</label>
+<label><input type="radio" name="q5"> Apelidos locais de IP (ex.: <code>192.168.1.60 meusite.local</code>), consultados antes do DNS.</label>
+<label><input type="radio" name="q5"> Listar os servidores DNS da internet.</label>
+<label><input type="radio" name="q5"> Salvar o histórico de comandos do terminal.</label>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">6. O que significa <code>HTTP/1.1 404 Not Found</code> na primeira linha do <code>curl -i</code>?</p>
+<label><input type="radio" name="q6"> A conexão com a internet caiu.</label>
+<label><input type="radio" name="q6"> O DNS não achou o site.</label>
+<label><input type="radio" name="q6"> A conexão funcionou e o servidor respondeu, mas a página/pedido não existe naquele endereço.</label>
+<label><input type="radio" name="q6"> O servidor está em manutenção.</label>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">7. O que o <code>-i</code> faz no <code>curl</code>?</p>
+<label><input type="radio" name="q7"> Mostra os headers da resposta junto com o corpo (a 1ª linha traz o status, ex.: 200 OK).</label>
+<label><input type="radio" name="q7"> Faz o download como arquivo zip.</label>
+<label><input type="radio" name="q7"> Ignora o certificado HTTPS.</label>
+<label><input type="radio" name="q7"> Aumenta a velocidade da conexão.</label>
+</div>
+
+<hr>
+
+<h2>Parte 3 — diagnóstico e transporte</h2>
+<p>Por fim, as ferramentas de detetive e as regras de transporte: <code>ss</code>, <code>nc</code>, <code>traceroute</code>, connection refused, TCP vs UDP e gateway/NAT. Aulas: <a href="comando-ss.html">ss</a>, <a href="ref-portas.html">portas</a>, <a href="problemas.html">problemas comuns</a>, <a href="tcp-vs-udp.html">TCP vs UDP</a> e <a href="gateway-padrao.html">gateway</a>.</p>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">8. O que mostra <code>ss -tlnp</code>?</p>
+<label><input type="radio" name="q8"> Os sites visitados recentemente.</label>
+<label><input type="radio" name="q8"> As portas TCP da sua máquina em estado LISTEN (escutando), com o processo dono de cada uma.</label>
+<label><input type="radio" name="q8"> A rota padrão até a internet.</label>
+<label><input type="radio" name="q8"> Os servidores DNS configurados.</label>
+</div>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">9. Você rodou <code>curl http://exemplo.com:8080</code> e recebeu <code>curl: (7) … Connection refused</code>. O que isso significa?</p>
+<label><input type="radio" name="q9"> O nome exemplo.com não existe no DNS.</label>
+<label><input type="radio" name="q9"> A conexão demorou demais (timeout).</label>
+<label><input type="radio" name="q9"> O certificado HTTPS expirou.</label>
+<label><input type="radio" name="q9"> A máquina respondeu, mas não há nenhum serviço ouvindo na porta 8080.</label>
+</div>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">10. Qual é a principal diferença entre TCP e UDP?</p>
+<label><input type="radio" name="q10"> TCP usa a porta 80 e UDP a porta 443.</label>
+<label><input type="radio" name="q10"> UDP é sempre criptografado e TCP não.</label>
+<label><input type="radio" name="q10"> TCP abre conexão com handshake e confirma a entrega dos pacotes (confiável); UDP manda sem conexão e sem garantia (rápido).</label>
+<label><input type="radio" name="q10"> Não há diferença; são apelidos do mesmo protocolo.</label>
+</div>
+
+<hr>
+
+<h2>Como foi?</h2>
+<p>Olhe o placar lá no topo. Acertou tudo? Ótimo — volte para a <a href="ref-comandos.html">cola de comandos</a> sempre que precisar no dia a dia. Errou alguma? Cada parte acima tem os links das aulas correspondentes — revise só o que travou, sem culpa: errar no quiz é de graça.</p>
+
+<div class="note">
+<strong>Quiz não é nota, é bússola:</strong> cada erro aqui é um conceito que ainda não assentou — e agora você sabe exatamente em qual página do guia ele mora.
+</div>
+
+<hr>
+
+<h2>Gabarito comentado</h2>
+<ol class="passo">
+  <li><strong>IP × porta:</strong> IP = o endereço da máquina na rede (192.168.1.50); porta = o serviço dentro dela (443). <em>(aulas: <a href="o-que-e-ip.html">IP</a>, <a href="portas.html">portas</a>)</em></li>
+  <li><strong>URL:</strong> <code>https://</code> protocolo · <code>exemplo.com</code> domínio · <code>:443</code> porta · <code>/caminho</code> recurso. <em>(<a href="anatomia-url.html">anatomia da URL</a>)</em></li>
+  <li><strong>ping:</strong> testa se o host responde (ICMP) e mede a latência. <em>(<a href="comando-ping.html">ping</a>)</em></li>
+  <li><strong>dig +short:</strong> imprime só o IP. <em>(<a href="comando-dig.html">dig</a>)</em></li>
+  <li><strong>/etc/hosts:</strong> apelidos locais, consultados antes do DNS. <em>(<a href="arquivo-hosts.html">/etc/hosts</a>)</em></li>
+  <li><strong>404:</strong> a conexão funcionou; o recurso não existe. <em>(<a href="ref-status-http.html">status HTTP</a>)</em></li>
+  <li><strong>curl -i:</strong> mostra headers + corpo, com o status na 1ª linha. <em>(<a href="comando-curl.html">curl</a>)</em></li>
+  <li><strong>ss -tlnp:</strong> portas TCP em LISTEN + processo. <em>(<a href="comando-ss.html">ss</a>)</em></li>
+  <li><strong>Connection refused:</strong> máquina respondeu, porta fechada. <em>(<a href="problemas.html">problemas</a>)</em></li>
+  <li><strong>TCP × UDP:</strong> TCP confirma entrega (confiável); UDP manda direto (rápido). <em>(<a href="tcp-vs-udp.html">TCP vs UDP</a>)</em></li>
+</ol>
+
+<div class="tip"><strong>Próxima aula:</strong> terminou o guia! Volte ao <a href="index.html">início do Guia Redes</a> e escolha o seu nível — ou releia os <a href="projetos.html">projetos práticos</a> com tudo o que você acabou de testar aqui.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

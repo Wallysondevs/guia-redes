@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Projetos práticos de rede — mão na massa no terminal | Guia Redes</title>
+<meta name="description" content="Seção de projetos do Guia Redes: 5 projetos práticos de rede para fazer no terminal simulado (ou na sua máquina real) — servir um site local com python3 -m http.server e testar com curl, consumir uma API pública com curl e dig, configurar DNS local com /etc/hosts, criar uma rede virtual entre duas VMs no VirtualBox e monitorar portas abertas com ss. Cada projeto tem passo a passo, comandos reais e missões.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Seção de <span class="hl">projetos</span> — mão na massa</h1>
+
+<p class="intro">Chegou a hora de <strong>juntar as peças</strong>. Até aqui você aprendeu o que é IP, porta, DNS, HTTP e viu os comandos um a um. Agora a Ana vai fazer <strong>cinco projetos de verdade</strong>, do tipo que se faz no dia a dia de quem trabalha com rede: subir um site local, consumir uma API, apelidar um endereço no DNS local, ligar duas máquinas numa rede virtual e vigiar as portas abertas do computador.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A servir um site estático local com <code>python3 -m http.server 8000</code> e acessar com <code>curl localhost:8000</code>.</li>
+  <li>A testar uma API pública na prática: <code>dig</code> para achar o IP e <code>curl -i</code> para ler status e JSON.</li>
+  <li>A usar o <code>/etc/hosts</code> como "agenda de apelidos" local de DNS.</li>
+  <li>A criar uma rede interna entre duas VMs (VirtualBox) e pingar uma na outra.</li>
+  <li>A monitorar portas abertas com <code>ss -tlnp</code>, <code>nc</code> e um script com <code>watch</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Como funcionam os projetos</h2>
+<p>Cada projeto é um <strong>passo a passo curto</strong>, com os comandos reais e a saída que eles imprimem. Nas caixas escuras dá para <strong>experimentar no terminal simulado</strong> da máquina fictícia <strong>ana@notebook</strong> (IP <code>192.168.1.50/24</code>, gateway <code>192.168.1.1</code>, DNS <code>192.168.1.1</code> e <code>8.8.8.8</code>): cada caixa tem uma <strong>missão</strong> — digite o comando pedido e, quando a saída certa aparecer, gagne o ✔ "Missão cumprida!". Se travar, clique em <strong>Ver comando</strong>.</p>
+<p>Quer fazer na sua máquina de verdade? Os mesmos comandos funcionam no Linux/macOS (no Windows, use o WSL ou o Prompt com <code>curl</code>, que já vem instalado). Só o <code>python3 -m http.server</code> e o <code>/etc/hosts</code> são de máquina Linux — no Windows o hosts fica em <code>C:\Windows\System32\drivers\etc\hosts</code>.</p>
+
+<div class="try" data-goal="Comandos disponíveis" data-solucao="help">
+<p class="try-task"><strong>Missão:</strong> antes de começar, digite <code>help</code> no terminal abaixo e veja a lista de comandos de rede que o simulador entende.</p>
+</div>
+
+<hr>
+
+<h2>Os cinco projetos</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Projeto</th><th>O que você faz</th><th>Comandos que pratica</th></tr>
+<tr><td><a href="projeto-site-local.html">1. Site local</a></td><td>Cria uma pasta com um <code>index.html</code>, sobe um servidor HTTP na porta 8000 e acessa com o navegador e com <code>curl</code>.</td><td><code>python3 -m http.server 8000</code>, <code>curl -i localhost:8000</code>, <code>ss -tlnp</code></td></tr>
+<tr><td><a href="projeto-api-publica.html">2. API pública</a></td><td>Descobre o IP de <code>api.exemplo.com</code> com DNS e consome a API: lista usuários, vê um 404 de verdade.</td><td><code>dig api.exemplo.com +short</code>, <code>curl -i https://api.exemplo.com/usuarios</code></td></tr>
+<tr><td><a href="projeto-hosts-dns.html">3. DNS local (/etc/hosts)</a></td><td>Adiciona um apelido local (<code>meusite.local</code> → <code>192.168.1.60</code>) e confirma com <code>dig</code> e <code>ping</code>.</td><td><code>cat /etc/hosts</code>, <code>dig meusite.local +short</code>, <code>cat /etc/resolv.conf</code></td></tr>
+<tr><td><a href="projeto-rede-virtual.html">4. Rede virtual entre 2 VMs</a></td><td>No VirtualBox, cria uma "rede interna" e liga duas VMs nela; uma pinga a outra e acessa por SSH.</td><td><code>ping 192.168.1.60</code>, <code>ssh ana@192.168.1.60</code>, <code>ip addr</code></td></tr>
+<tr><td><a href="projeto-monitor-portas.html">5. Monitorar portas</a></td><td>Lista as portas abertas do notebook, testa uma porta com <code>nc</code> e monta um monitor ao vivo com <code>watch</code>.</td><td><code>ss -tlnp</code>, <code>netstat -tlnp</code>, <code>nc -zv localhost 8000</code>, <code>nmap localhost</code></td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Pré-requisitos</h2>
+<ul>
+  <li>Ter passado pelo <strong>Nível 1</strong>: <a href="introducao.html">introdução</a>, <a href="o-que-e-ip.html">IP</a>, <a href="portas.html">portas</a>, <a href="o-que-e-dns.html">DNS</a>, <a href="o-que-e-http.html">HTTP</a> e os comandos <a href="comando-ping.html">ping</a>, <a href="comando-curl.html">curl</a>, <a href="comando-dig.html">dig</a> e <a href="comando-ss.html">ss</a>.</li>
+  <li>Entender a máquina fictícia: <code>ana@notebook</code>, rede <code>192.168.1.0/24</code> — confirme com <code>ip addr</code> e <code>ip route</code> no terminal abaixo.</li>
+  <li>Se quiser repetir na máquina real, um Linux com <code>python3</code>, <code>curl</code> e <code>iproute2</code> (o pacote do comando <code>ss</code>/<code>ip</code>) installed.</li>
+</ul>
+
+<div class="try" data-goal="192.168.1.50" data-solucao="ip addr">
+<p class="try-task"><strong>Missão:</strong> confirme a sua máquina no simulador: rode <code>ip addr</code> e ache o IP <code>192.168.1.50/24</code> na interface <code>eth0</code>. Depois rode <code>ip route</code> para ver o gateway.</p>
+</div>
+
+<pre class="term">$ ip addr
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 state UNKNOWN
+    inet 127.0.0.1/8 scope host lo
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 state UP
+    link/ether aa:bb:cc:dd:ee:ff
+    inet 192.168.1.50/24 scope global eth0
+$ ip route
+default via 192.168.1.1 dev eth0 proto dhcp metric 100
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.50</pre>
+
+<div class="note">
+<strong>Regra de bolso dos projetos:</strong> todo projeto de rede segue o mesmo roteiro de diagnóstico — <code>ping</code> (a máquina responde?), <code>dig</code> (o nome resolve?), <code>curl</code> (o serviço responde?), <code>ss</code> (a porta está aberta aqui?). Se travar em algum passo, volte por esse roteiro. A página <a href="problemas.html">Problemas comuns</a> detalha cada falha.</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="projeto-site-local.html">Projeto 1 — servir um site local e acessar com curl</a> — o primeiro projeto, com <code>python3 -m http.server 8000</code>.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

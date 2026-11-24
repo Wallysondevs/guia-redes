@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Métodos HTTP: GET, POST, PUT, PATCH, DELETE | Guia Redes</title>
+<meta name="description" content="O que são métodos (verbos) HTTP e quando usar cada um: GET para ler, POST para criar, PUT para substituir inteiro, PATCH para alterar em parte e DELETE para apagar. Linha de requisição, idempotência, exemplos com curl -X na API fictícia api.exemplo.com e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Métodos HTTP</span> — o verbo da requisição</h1>
+
+<p class="intro">Toda requisição HTTP começa com uma <strong>linha de comando</strong> que traz um <strong>método</strong> (ou verbo): ele diz <em>o que</em> o cliente quer fazer com aquele endereço. Pense no correio: a URL é o endereço do envelope e o método é a instrução — "leia isto", "cadastre isto", "troque isto", "apague isto".</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os 5 métodos principais: <code>GET</code>, <code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>.</li>
+  <li>A ler a <strong>linha de requisição</strong>: <code>GET /usuarios HTTP/1.1</code>.</li>
+  <li>Quais métodos são <strong>seguros</strong> (não mudam nada no servidor) e quais são <strong>idempotentes</strong>.</li>
+  <li>Usar <code>curl -X METODO</code> para mandar cada verbo — na API fictícia <code>api.exemplo.com</code>.</li>
+  <li>O que o servidor responde quando você pede algo que não existe (404).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A linha de requisição</h2>
+<p>Quando o navegador ou o curl conversa com um servidor, a primeira linha do papo é assim:</p>
+<dl class="anatomy">
+  <dt>GET</dt><dd>O <strong>método</strong> (verbo): aqui, "quero ler".</dd>
+  <dt>/usuarios</dt><dd>O <strong>caminho</strong> do recurso dentro do servidor.</dd>
+  <dt>HTTP/1.1</dt><dd>A <strong>versão</strong> do protocolo usada nessa conversa.</dd>
+</dl>
+<p>O <code>curl</code> manda <code>GET</code> por padrão. Para mandar outro verbo, use <code>-X</code>:</p>
+<pre class="term">$ curl -v -X POST -d '{"nome":"Ana"}' https://api.exemplo.com/usuarios
+* Trying 93.184.216.35:443...
+* Connected to api.exemplo.com (93.184.216.35) port 443
+> POST api.exemplo.com/usuarios HTTP/1.1
+> Host: api.exemplo.com
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 15
+>
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]
+* Connection #0 to host api.exemplo.com left intact</pre>
+<p>Repare na linha que começa com <code>&gt;</code> (mostra o que o curl <em>enviou</em>): o verbo foi <code>POST</code> e o corpo da mensagem levou o JSON <code>{"nome":"Ana"}</code>.</p>
+
+<hr>
+
+<h2>Os cinco métodos principais</h2>
+<p>Cada método é uma <strong>intenção</strong> diferente. A tabela resume:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Método</th><th>O que faz</th><th>Seguro?</th><th>Idempotente?</th><th>Exemplo do dia a dia</th></tr>
+<tr><td><code>GET</code></td><td>Lê / pede um recurso. Não deve mudar nada no servidor.</td><td>sim</td><td>sim</td><td>Abrir uma página, listar usuários, ver um perfil.</td></tr>
+<tr><td><code>POST</code></td><td>Cria um recurso novo.</td><td>não</td><td>não</td><td>Cadastrar usuário, enviar formulário, fazer login.</td></tr>
+<tr><td><code>PUT</code></td><td>Substitui o recurso <em>inteiro</em>.</td><td>não</td><td>sim</td><td>Trocar o perfil completo de uma vez.</td></tr>
+<tr><td><code>PATCH</code></td><td>Altera <em>parte</em> do recurso.</td><td>não</td><td>não</td><td>Mudar só o e-mail do cadastro.</td></tr>
+<tr><td><code>DELETE</code></td><td>Apaga o recurso.</td><td>não</td><td>sim</td><td>Remover um usuário ou um produto.</td></tr>
+</table>
+</div>
+<ul>
+  <li><strong>Seguro</strong> = não altera o estado do servidor (GET, HEAD, OPTIONS). É como olhar uma vitrine: você não leva nada embora.</li>
+  <li><strong>Idempotente</strong> = repetir a mesma requisição dá o mesmo resultado final (PUT e DELETE: repetir não muda a longo prazo). POST não é idempotente: cada POST cria um registro novo.</li>
+</ul>
+
+<hr>
+
+<h2>Na prática: a API fictícia api.exemplo.com</h2>
+<p>A máquina da Ana consegue falar com a API fictícia <code>https://api.exemplo.com</code>. Veja os verbos em ação:</p>
+<pre class="term">$ curl -i https://api.exemplo.com/usuarios
+HTTP/2 200
+content-type: application/json
+content-length: 87
+
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]
+$ curl -i -X DELETE https://api.exemplo.com/usuarios/999
+HTTP/2 404
+content-type: application/json
+
+{"erro":"usuário não encontrado"}</pre>
+<p>O <code>GET</code> listou os usuários (200 OK). O <code>DELETE</code> tentou apagar o usuário 999 — que não existe — e o servidor respondeu <strong>404</strong> (veja a aula <a href="status-codes.html">Códigos de status</a>).</p>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> faça um <code>GET</code> (o padrão do curl) em <code>http://exemplo.com</code> e veja o <code>200 OK</code> com os headers: <code>curl -i http://exemplo.com</code></p>
+</div>
+
+<div class="try" data-goal="POST api.exemplo.com" data-solucao="curl -v -X POST -d '{&quot;nome&quot;:&quot;Ana&quot;}' https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> mande um <code>POST</code> com JSON para a API e veja o verbo aparecer na conversa: <code>curl -v -X POST -d '{"nome":"Ana"}' https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="try" data-goal="HTTP/2 404" data-solucao="curl -i -X DELETE https://api.exemplo.com/usuarios/999">
+<p class="try-task"><strong>Missão:</strong> tente apagar um usuário que não existe com <code>DELETE</code> e veja o <code>404</code>: <code>curl -i -X DELETE https://api.exemplo.com/usuarios/999</code></p>
+</div>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i -X PUT -d '{&quot;nome&quot;:&quot;Beto&quot;}' https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> use <code>PUT</code> para substituir a lista inteira de usuários: <code>curl -i -X PUT -d '{"nome":"Beto"}' https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="warning">
+<strong>CUIDADO:</strong> nunca use <code>GET</code> para ações que mudam algo no servidor (tipo <code>/apagar?id=5</code>) — GET pode ser disparado por engano (links, prefetch do navegador, crawlers) e precisa ser seguro. Apagar é <code>DELETE</code> (ou <code>POST</code>), e sempre por <strong>HTTPS</strong> (aula <a href="https-tls.html">HTTPS/TLS</a>).
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Qual método cria um recurso novo no servidor?</p>
+<label><input type="radio" name="q1"> <code>GET</code></label>
+<label><input type="radio" name="q1"> <code>POST</code></label>
+<label><input type="radio" name="q1"> <code>DELETE</code></label>
+<label><input type="radio" name="q1"> <code>PUT</code></label>
+</div>
+
+<div class="mc" data-answer="4">
+<p class="mc-q">Qual método é seguro (não altera nada no servidor) e idempotente?</p>
+<label><input type="radio" name="q2"> <code>POST</code></label>
+<label><input type="radio" name="q2"> <code>PATCH</code></label>
+<label><input type="radio" name="q2"> <code>DELETE</code></label>
+<label><input type="radio" name="q2"> <code>GET</code></label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Toda requisição começa com <code>MÉTODO caminho HTTP/x.y</code> — o método é a intenção.</li>
+  <li><code>GET</code> lê (seguro, idempotente); <code>POST</code> cria; <code>PUT</code> substitui inteiro (idempotente); <code>PATCH</code> altera parcial; <code>DELETE</code> apaga (idempotente).</li>
+  <li>No curl: <code>-X POST</code>, <code>-X PUT</code>… e <code>-d 'dados'</code> para mandar o corpo. Sem <code>-X</code>, o curl faz <code>GET</code>.</li>
+  <li>Apagar algo que não existe devolve <strong>404</strong> — o servidor está dizendo "não achei esse recurso".</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="headers-http.html">Cabeçalhos (headers) de requisição e resposta</a> — o "envelope" que acompanha cada método: <code>Host</code>, <code>Content-Type</code>, <code>Set-Cookie</code> e outros.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

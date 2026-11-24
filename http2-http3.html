@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP/2 e HTTP/3 (QUIC) | Guia Redes</title>
+<meta name="description" content="HTTP/2 e HTTP/3 (QUIC) comparados com HTTP/1.1: multiplexing (vários pedidos numa conexão só), binário, compressão de headers (HPACK/QPACK), server push, e por que o HTTP/3 troca o TCP pelo QUIC sobre UDP (menos latência, sem head-of-line blocking, migração de rede). Tabela comparativa das três versões e missões com curl -i http vs https no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">HTTP/2</span> e HTTP/3 (QUIC)</h1>
+
+<p class="intro">O HTTP/1.1 é como uma <strong>fila única de banco com um guichê só</strong>: cada pedido espera o anterior terminar (e o navegador abria várias conexões só para enganar). O <strong>HTTP/2</strong> (2015) trouxe vários guichês <em>na mesma conexão</em> (multiplexing). O <strong>HTTP/3</strong> (2022) foi além: trocou o transporte TCP pelo <strong>QUIC</strong>, que roda sobre UDP — menos latência e sem o bloqueio de fila do TCP.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os problemas do HTTP/1.1: uma conexão por recurso, head-of-line blocking, headers repetidos;</li>
+  <li>O que mudou no <strong>HTTP/2</strong>: binário, multiplexing, HPACK, server push, sempre sobre TLS na prática;</li>
+  <li>O que mudou no <strong>HTTP/3</strong>: QUIC sobre UDP, 0-RTT, sem head-of-line blocking de transporte, migração de rede;</li>
+  <li>Tabela comparativa HTTP/1.1 × HTTP/2 × HTTP/3;</li>
+  <li>Ver as versões diferentes com <code>curl -i</code> no simulador.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>HTTP/1.1: o gargalo da fila única</h2>
+<p>Numa página moderna há dezenas de recursos (HTML, vários CSS, vários JS, imagens, fontes). No HTTP/1.1 cada conexão trafega <strong>um pedido por vez</strong>, e as respostas chegam na ordem — se o primeiro arquivo for lento, todos os outros esperam (isso é o <strong>head-of-line blocking</strong>). Por isso os navegadores abriam até 6 conexões paralelas para a mesma origem, e os sites "apelavam" para juntar arquivos (sprites, CSS inline) — gambiarras que o HTTP/2 eliminou.</p>
+
+<hr>
+
+<h2>HTTP/2: vários pedidos na mesma conexão</h2>
+<ul>
+  <li><strong>Binário</strong>: as mensagens viraram <em>frames</em> binários (mais rápidos de parsear que texto puro);</li>
+  <li><strong>Multiplexing</strong>: vários pedidos e respostas <strong>ao mesmo tempo, numa única conexão TCP</strong>, cada um com seu <em>stream ID</em> — adeus fila única;</li>
+  <li><strong>HPACK</strong>: compressão dos headers (eles se repetem muito: <code>User-Agent</code>, <code>Accept</code>, cookies…);</li>
+  <li><strong>Server push</strong>: o servidor pode mandar o CSS/JS antes mesmo de você pedir (hoje pouco usado, mas existe);</li>
+  <li><strong>Sempre sobre TLS na prática</strong>: todos os navegadores só falam HTTP/2 em HTTPS (h2).</li>
+</ul>
+
+<p>Resultado: a página carrega com <strong>uma conexão só</strong>, sem gambiarra de juntar arquivos, e sem esperar o recurso lento travar os outros.</p>
+
+<hr>
+
+<h2>HTTP/3: QUIC sobre UDP</h2>
+<p>O HTTP/2 ainda sofria com o TCP: se um pacote TCP se perde, <strong>todos os streams daquela conexão param</strong> esperando a retransmissão (head-of-line blocking do transporte). O HTTP/3 risca o TCP do mapa: o transporte passa a ser o <strong>QUIC</strong>, um protocolo novo que roda sobre <strong>UDP</strong> e já vem com criptografia (TLS 1.3) de fábrica:</p>
+<ul>
+  <li><strong>Streams independentes</strong>: perde um pacote? só aquele stream espera; os outros continuam;</li>
+  <li><strong>0-RTT / 1-RTT</strong>: na reconexão, o handshake é quase instantâneo (com o servidor já conhecido, manda dados junto);</li>
+  <li><strong>Migração de rede</strong>: trocou de Wi-Fi para 4G no meio do download? a conexão continua (o QUIC usa um <em>connection ID</em>, não o IP+porta);</li>
+  <li><strong>QPACK</strong>: a evolución do HPACK para o QUIC.</li>
+</ul>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>HTTP/1.1 (1997)</th><th>HTTP/2 (2015)</th><th>HTTP/3 (2022)</th></tr>
+<tr><td>Transporte</td><td>TCP, 1 pedido por conexão</td><td>TCP, vários pedidos (multiplexing)</td><td><strong>QUIC sobre UDP</strong></td></tr>
+<tr><td>Formato</td><td>Texto</td><td>Binário (frames)</td><td>Binário (frames QUIC)</td></tr>
+<tr><td>Headers</td><td>Texto puro, repetido</td><td>HPACK (comprimido)</td><td>QPACK (comprimido)</td></tr>
+<tr><td>Conexões por origem</td><td>Até 6 paralelas (gambiarra)</td><td><strong>1 só</strong></td><td><strong>1 só</strong></td></tr>
+<tr><td>Perda de pacote</td><td>Trava a conexão</td><td>Trava <strong>todos os streams</strong> (HOL blocking do TCP)</td><td>Afeta só o stream do pacote perdido</td></tr>
+<tr><td>Handshake</td><td>TCP + TLS: 2–3 idas</td><td>TCP + TLS: 2–3 idas</td><td>QUIC + TLS 1.3: 1 ida (0-RTT se já conhecia)</td></tr>
+<tr><td>Troca de rede (Wi-Fi→4G)</td><td>Conexão cai e recomeça</td><td>Conexão cai e recomeça</td><td><strong>Continua firme</strong> (connection ID)</td></tr>
+<tr><td>Criptografia</td><td>Opcional (HTTPS separado)</td><td>Sempre TLS na prática</td><td><strong>TLS 1.3 obrigatório, embutido</strong></td></tr>
+<tr><td>Uso hoje</td><td>Ainda existe (APIs simples)</td><td>Padrão absoluto na web</td><td>Crescendo rápido (Google, Cloudflare, Facebook já usam)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Vendo as versões no simulador</h2>
+<p>O simulador imita exatamente essa diferença: HTTP (porta 80) responde <code>HTTP/1.1</code>; HTTPS (porta 443) responde <code>HTTP/2</code> — como na vida real, onde o navegador só negocia HTTP/2 sobre TLS:</p>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão 1:</strong> rode <code>curl -i http://exemplo.com</code> — repare no <code>HTTP/1.1 200 OK</code> (porta 80, sem criptografia).</p>
+</div>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão 2:</strong> rode <code>curl -i https://exemplo.com</code> — repare no <code>HTTP/2 200</code> (porta 443, TLS + multiplexing). Na web moderna, HTTPS = HTTP/2 (ou HTTP/3).</p>
+</div>
+
+<div class="warning">
+<strong>HTTP/2 não é bala de prata</strong>
+<p>Multiplexing sobre uma única conexão pode piorar em redes com muita perda de pacotes (um pacote perdido trava todos os streams do TCP). É por isso que o HTTP/3 existe. E lembre: HTTP/2/3 não substituem o cache da <a href="cdn.html">CDN</a> nem a <a href="compressao.html">compressão</a> — as três coisas trabalham juntas.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>HTTP/1.1: uma fila por conexão; o navegador abria várias conexões para contornar.</li>
+  <li><strong>HTTP/2</strong>: binário + multiplexing (vários pedidos numa conexão TCP) + HPACK + TLS obrigatório na prática.</li>
+  <li><strong>HTTP/3</strong>: HTTP sobre <strong>QUIC/UDP</strong>, com TLS 1.3 embutido, streams independentes, 0-RTT e Continuidade ao trocar de rede.</li>
+  <li>No simulador: <code>curl -i http://…</code> → <code>HTTP/1.1 200 OK</code>; <code>curl -i https://…</code> → <code>HTTP/2 200</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="websockets.html">WebSockets: conversa contínua</a> — e se o HTTP é "liga, pede, desliga", o WebSocket deixa a linha aberta.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxy e proxy reverso (nginx) | Guia Redes</title>
+<meta name="description" content="Proxy direto vs proxy reverso explicado com a analogia da recepcionista: o cliente não sabe que existe um intermediário no reverso. Configuração real de nginx como proxy reverso (proxy_pass, X-Real-IP, X-Forwarded-For, X-Forwarded-Proto), benefícios (TLS, cache, load balance, esconder servidores internos) e missão com curl -i no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Proxy reverso</span> (nginx)</h1>
+
+<p class="intro">Num prédio comercial, você não bate na porta de cada sala: você fala com a <strong>recepcionista</strong>, e ela encaminha para a sala certa. Na internet existe o mesmo papel: o <strong>proxy</strong>. Existe o proxy "direto" (do lado do cliente) e o <strong>proxy reverso</strong> (do lado do servidor) — e é este último, geralmente um <strong>nginx</strong>, que faz a mágica de muitos sites.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A diferença entre <strong>proxy direto</strong> (cliente) e <strong>proxy reverso</strong> (servidor);</li>
+  <li>Configurar o <strong>nginx como proxy reverso</strong> com <code>proxy_pass</code>;</li>
+  <li>Os headers <code>X-Real-IP</code>, <code>X-Forwarded-For</code> e <code>X-Forwarded-Proto</code>;</li>
+  <li>Para que serve na prática: TLS, cache, load balance e esconder os servidores internos;</li>
+  <li>Ver a resposta chegando "pelo proxy" com <code>curl -i</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Proxy direto × proxy reverso</h2>
+<p>A analogia da recepcionista funciona pros dois lados:</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>Proxy direto (forward)</th><th>Proxy reverso (reverse)</th></tr>
+<tr><td>Quem usa</td><td>O <strong>cliente</strong> (você configura no navegador)</td><td>O <strong>servidor</strong> (o dono do site configura)</td></tr>
+<tr><td>Analogia</td><td>Você manda um amigo pedir pizza em vez de você</td><td>A recepcionista da pizzaria recebe seu pedido e passa para a cozinha</td></tr>
+<tr><td>O destino sabe?</td><td>Sim — a pizzaria sabe que foi o seu amigo</td><td><strong>Não</strong> — a cozinha só vê a recepcionista</td></tr>
+<tr><td>Para que serve</td><td>Privacidade, burlar região, cache local, controle em empresas</td><td>Esconder servidores internos, TLS, balancear carga, cache, WAF</td></tr>
+<tr><td>Exemplo</td><td>Squid, proxy do navegador</td><td><strong>nginx, Apache, HAProxy, Cloudflare</strong></td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Proxy reverso na prática (nginx)</h2>
+<p>A Ana tem uma aplicação rodando só na máquina dela, na porta 3000 (<code>http://127.0.0.1:3000</code>), e não quer expor isso direto. Ela coloca um <strong>nginx</strong> na frente, escutando na 443, que recebe o pedido HTTPS, descriptografa e encaminha para a aplicação:</p>
+
+<pre class="file"># /etc/nginx/sites-enabled/meusite
+server {
+    listen 443 ssl;
+    server_name exemplo.com;
+
+    ssl_certificate     /etc/letsencrypt/live/exemplo.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/exemplo.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;          # encaminha para a app
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;              # IP de quem pediu de verdade
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;           # http ou https
+    }
+}</pre>
+
+<dl class="anatomy">
+  <dt>proxy_pass</dt><dd>O endereço interno para onde o nginx encaminha o pedido (a "sala" atrás da recepção).</dd>
+  <dt>X-Real-IP / X-Forwarded-For</dt><dd>Como o servidor interno descobre o <strong>IP real do cliente</strong> — sem isso, ele só veria o IP do proxy (127.0.0.1), e os logs ficariam inúteis.</dd>
+  <dt>X-Forwarded-Proto</dt><dd>Informa se o pedido original veio por <strong>HTTP ou HTTPS</strong> — o app precisa saber para montar URLs corretas.</dd>
+  <dt>listen 443 ssl + certificados</dt><dd>O proxy reverso também faz o <strong>TLS</strong> (o "certificado no cadeado" fica nele, não na aplicação) — chama-se <em>TLS termination</em>.</dd>
+</dl>
+
+<hr>
+
+<h2>Para que serve um proxy reverso</h2>
+<ul>
+  <li><strong>Esconder os servidores internos</strong>: o mundo vê só o proxy; a aplicação na porta 3000 não precisa ser alcançável de fora (o firewall bloqueia — aula <a href="firewall-iptables.html">firewall</a>);</li>
+  <li><strong>TLS/HTTPS</strong> num lugar só, com certificados fáceis de renovar (Let's Encrypt);</li>
+  <li><strong>Cache</strong>: páginas estáticas servidas pelo proxy sem bater na aplicação;</li>
+  <li><strong>Load balancing</strong>: o proxy distribui os pedidos entre vários servidores (próxima aula, <a href="load-balancer.html">load balancer</a>);</li>
+  <li><strong>Compressão</strong> (aula <a href="compressao.html">compressão</a>) e WAF (firewall de aplicação).</li>
+</ul>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i http://exemplo.com</code>. A resposta <code>HTTP/1.1 200 OK</code> com <code>Server: nginx/1.25.3</code> veio do <strong>proxy</strong>, no lugar do servidor interno — é exatamente o que um proxy reverso faz. Compare com <code>curl -i https://exemplo.com</code> (que mostra <code>HTTP/2 200</code> e HSTS, o TLS terminando no proxy).</p>
+</div>
+
+<div class="warning">
+<strong>Detalhe importante: o Host</strong>
+<p>Muitos servidores hospedam vários sites na mesma máquina (virtual hosts). O proxy reverso precisa mandar o header <code>Host</code> original (<code>proxy_set_header Host $host;</code>) — senão o servidor de trás não sabe <em>qual site</em> você pediu e responde com o padrão (ou erro). Esquecer esse header é um dos erros mais comuns de configuração de nginx.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Proxy direto = intermediário do lado do <strong>cliente</strong>; proxy reverso = intermediário do lado do <strong>servidor</strong> (quem vê de fora não sabe que existe).</li>
+  <li>O nginx como proxy reverso: <code>proxy_pass</code> para a app interna + headers <code>X-Real-IP</code>, <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code> e <code>Host</code>.</li>
+  <li>Benefícios: esconder servidores, TLS centralizado, cache, load balance e WAF na borda.</li>
+  <li>O <code>curl -i</code> mostra o <code>Server: nginx</code> — a resposta veio do proxy, não da aplicação.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="cdn.html">CDN: cópias do seu site perto do usuário</a> — e se o proxy reverso fica num servidor só, a CDN coloca "recepções" em dezenas de cidades.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

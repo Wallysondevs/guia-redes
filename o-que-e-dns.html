@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que é DNS — a agenda telefônica da internet | Guia Redes</title>
+<meta name="description" content="O que é o DNS (Domain Name System) e por que ele é a agenda telefônica da internet: nomes fáceis (exemplo.com) traduzidos para IPs (93.184.216.34). Como funciona a consulta (resolver local, raiz, TLD .com, servidor autoritativo), o arquivo /etc/resolv.conf (DNS da máquina da Ana: 192.168.1.1 e 8.8.8.8), e comandos no simulador: dig exemplo.com, dig exemplo.com +short e cat /etc/resolv.conf. Missões com saída real do simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">DNS</span>: a agenda telefônica da internet</h1>
+
+<p class="intro">Computadores se entendem por números (IPs), mas gente se lembra de nomes. O <strong>DNS</strong> é o sistema que traduz <code>exemplo.com</code> → <code>93.184.216.34</code> — como a agenda telefônica do seu celular: você procura pelo nome ("Mercado do Zé") e ela te dá o número. Nesta aula: como a consulta acontece e como perguntar ao DNS com <code>dig</code>.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o DNS e por que a internet seria impossível sem ele (decorar 93.184.216.34?).</li>
+  <li>Como funciona a consulta: seu computador → DNS local (192.168.1.1) → raiz → TLD (.com) → servidor autoritativo do domínio.</li>
+  <li>Onde mora a configuração de DNS da máquina: <code>/etc/resolv.conf</code>.</li>
+  <li>Os comandos <code>dig</code> e <code>dig +short</code> no simulador.</li>
+  <li>O erro <code>NXDOMAIN</code>: quando o nome não existe na agenda.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia da agenda telefônica</h2>
+<p>Você não decora o número de telefone de todo mundo — você abre a agenda, digita o nome e pega o número. O DNS faz exatamente isso na internet:</p>
+<ul>
+  <li><strong>Nome</strong> (o que você digita): <code>exemplo.com</code> — fácil de lembrar.</li>
+  <li><strong>Número</strong> (o que a rede usa): <code>93.184.216.34</code> — o IP.</li>
+</ul>
+<p>Toda vez que você abre um site, antes de qualquer pacote, acontece uma consulta DNS em milissegundos. Sem DNS, a internet exigiria decorar BILHÕES de números.</p>
+
+<hr>
+
+<h2>Como a consulta acontece (a agenda tem filiais)</h2>
+<p>O DNS é um sistema <strong>hierárquico e distribuído</strong> — não existe uma agenda única no mundo. A consulta sobe por níveis:</p>
+<ul>
+  <li><strong>1. Seu computador</strong> pergunta ao <strong>DNS configurado nele</strong> (na rede da Ana: o roteador <code>192.168.1.1</code>, e o <code>8.8.8.8</code> do Google como reserva).</li>
+  <li><strong>2. Se o DNS local não sabe</strong>, pergunta aos <strong>servidores raiz</strong> ("."), que indicam quem cuida do <strong>TLD</strong> (".com").</li>
+  <li><strong>3. O servidor do TLD</strong> (.com) indica os <strong>servidores autoritativos</strong> do domínio (<code>ns1.exemplo.com</code>).</li>
+  <li><strong>4. O autoritativo responde</strong>: "exemplo.com é 93.184.216.34" — e a resposta fica em cache por um tempo (TTL).</li>
+</ul>
+<p>Na prática, quase sempre o DNS local já tem a resposta em cache e nem precisa subir a hierarquia.</p>
+
+<hr>
+
+<h2>Quem são os DNS da máquina da Ana</h2>
+<p>Os servidores de DNS usados pela máquina ficam no arquivo <code>/etc/resolv.conf</code>:</p>
+<pre class="term">$ cat /etc/resolv.conf
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+search localdomain</pre>
+<p>Ou seja: primeiro tenta o roteador da rede local (<code>192.168.1.1</code>), depois o DNS público do Google (<code>8.8.8.8</code>).</p>
+
+<div class="try" data-goal="nameserver 8.8.8.8" data-solucao="cat /etc/resolv.conf">
+<p class="try-task"><strong>Missão:</strong> digite <code>cat /etc/resolv.conf</code> e aperte <kbd>Enter</kbd>. Veja os servidores DNS configurados na máquina da Ana: <code>192.168.1.1</code> e <code>8.8.8.8</code>.</p>
+</div>
+
+<hr>
+
+<h2>Perguntando ao DNS: dig</h2>
+<p>O comando <code>dig</code> faz a pergunta direto a um servidor DNS. Sem opções, ele mostra a resposta completa (cabeçalho, pergunta, resposta e qual servidor atendeu):</p>
+<pre class="term">$ dig exemplo.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 4821
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; QUESTION SECTION:
+;exemplo.com.			IN	A
+
+;; ANSWER SECTION:
+exemplo.com.		3600	IN	A	93.184.216.34
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+<p>Com <code>+short</code>, o dig mostra <strong>só a resposta</strong> — só o IP, pronto para usar em scripts:</p>
+<pre class="term">$ dig exemplo.com +short
+93.184.216.34</pre>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> digite <code>dig exemplo.com +short</code> e aperte <kbd>Enter</kbd>. O DNS devolve só o número da agenda: <code>93.184.216.34</code>. Experimente também <code>dig google.com +short</code>.</p>
+</div>
+
+<hr>
+
+<h2>Quando o nome não existe: NXDOMAIN</h2>
+<p>Se você perguntar um nome que não está na agenda, o DNS responde <code>NXDOMAIN</code> (Non-Existent Domain):</p>
+<pre class="term">$ dig site-que-nao-existe.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 7712
+;; QUESTION SECTION:
+;site-que-nao-existe.com.	IN	A
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+<p>É o famoso "site não encontrado" que o navegador mostra — na verdade, o <em>nome</em> não foi encontrado no DNS. (Existe também o erro de DNS desligado: <code>connection timed out; no servers could be reached</code>.)</p>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>DNS = agenda telefônica da internet: traduz nomes (<code>exemplo.com</code>) em IPs (<code>93.184.216.34</code>).</li>
+  <li>A consulta passa pelo DNS local (<code>192.168.1.1</code>), que pode perguntar à hierarquia raiz → TLD → autoritativo.</li>
+  <li>Os DNS da máquina estão em <code>/etc/resolv.conf</code>: <code>nameserver 192.168.1.1</code> e <code>nameserver 8.8.8.8</code>.</li>
+  <li><code>dig exemplo.com</code> mostra a resposta completa; <code>dig exemplo.com +short</code> mostra só o IP.</li>
+  <li>Nome inexistente = <code>NXDOMAIN</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="o-que-e-http.html">HTTP: a conversa entre navegador e servidor</a> — agora que o nome virou IP, vamos ver a "carta" que o cliente envia e o servidor responde.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

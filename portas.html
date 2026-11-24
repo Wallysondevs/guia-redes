@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portas de rede — cada serviço tem sua sala no prédio | Guia Redes</title>
+<meta name="description" content="O que são portas de rede: se o IP é o endereço do prédio, a porta é a sala onde cada serviço atende. Portas de 0 a 65535, as mais comuns (22 SSH, 53 DNS, 80 HTTP, 443 HTTPS, 8000 dev), como testar se uma porta está aberta com nc -zv e nmap no terminal simulado, e a relação porta ↔ protocolo (TCP/UDP). Missões: nc -zv exemplo.com 443 e nmap exemplo.com.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Portas</span>: cada serviço tem seu número</h1>
+
+<p class="intro">Um computador tem <strong>um IP</strong>, mas roda vários serviços ao mesmo tempo: navegador, SSH, servidor de arquivos… Se o IP é o endereço do <strong>prédio</strong>, a <strong>porta</strong> é a <strong>sala</strong> onde cada serviço atende. Nesta aula: o que é uma porta (0–65535) e como testar se a sala está aberta.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é uma <strong>porta</strong>: um número de 0 a 65535 que identifica o serviço dentro da máquina.</li>
+  <li>A analogia do prédio: IP = endereço do prédio, porta = sala do serviço (80 = web, 443 = web segura, 22 = SSH).</li>
+  <li>As portas mais comuns e para que sirven.</li>
+  <li>Porta de origem vs porta de destino: a conversa tem duas pontas.</li>
+  <li>Testar portas abertas com <code>nc -zv</code> e <code>nmap</code> no simulador.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia do prédio</h2>
+<p>O servidor <code>exemplo.com</code> mora no IP <code>93.184.216.34</code> — esse é o prédio. Dentro desse prédio há várias salas:</p>
+<ul>
+  <li><strong>Sala 80</strong>: o porteiro do site comum (HTTP).</li>
+  <li><strong>Sala 443</strong>: o porteiro do site seguro (HTTPS).</li>
+  <li><strong>Sala 22</strong>: a entrada administrativa (SSH, acesso remoto).</li>
+  <li><strong>Sala 53</strong>: a telefonista (DNS).</li>
+</ul>
+<p>Quando seu navegador fala com o site, ele não bate só no prédio: bate na <strong>sala certa</strong>. A URL <code>https://exemplo.com</code> usa a sala 443; <code>http://exemplo.com</code> usa a sala 80. É por isso que na internet se diz "a porta 443 está aberta".</p>
+
+<hr>
+
+<h2>Os números: 0 a 65535</h2>
+<p>Porta é um número de <strong>16 bits</strong>: vai de <strong>0 a 65535</strong>. As de 0 a 1023 são <strong>bem-conhecidas</strong> (reservadas para serviços padrão, como 80 e 443); as outras qualquer programa pode usar (o servidorzinho da Ana usa a 8000).</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Porta</th><th>Serviço</th><th>Para que serve</th></tr>
+<tr><td><code>20/21</code></td><td>FTP</td><td>Transferência de arquivos (antigo)</td></tr>
+<tr><td><code>22</code></td><td>SSH</td><td>Acesso remoto seguro ao terminal de outra máquina</td></tr>
+<tr><td><code>23</code></td><td>Telnet</td><td>Acesso remoto antigo, sem criptografia (evite!)</td></tr>
+<tr><td><code>25</code></td><td>SMTP</td><td>Envio de e-mails entre servidores</td></tr>
+<tr><td><code>53</code></td><td>DNS</td><td>Consulta de nomes para IPs</td></tr>
+<tr><td><code>80</code></td><td>HTTP</td><td>Site comum, sem criptografia</td></tr>
+<tr><td><code>443</code></td><td>HTTPS</td><td>Site seguro, criptografado (padrão hoje)</td></tr>
+<tr><td><code>3306</code></td><td>MySQL</td><td>Banco de dados</td></tr>
+<tr><td><code>8000</code></td><td>dev</td><td>Servidor de desenvolvimento (é a porta que a Ana usa no notebook)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Toda conversa tem duas portas</h2>
+<p>Quando o navegador da Ana fala com <code>exemplo.com</code>, a conversa tem <strong>duas pontas</strong>:</p>
+<ul>
+  <li><strong>Porta de destino</strong>: a sala do servidor — 443 no caso do HTTPS.</li>
+  <li><strong>Porta de origem</strong>: uma porta aleatória e livre do computador dela (ex.: 51234) — é por onde a resposta volta.</li>
+</ul>
+<p>É como uma ligação telefônica: o número que você disca (destino) e o seu próprio número (origem).</p>
+
+<hr>
+
+<h2>Testando se a sala está aberta: nc e nmap</h2>
+<p>O comando <code>nc -zv HOST PORTA</code> (netcat) testa só uma porta: bate na sala e vê se alguém atende:</p>
+<pre class="term">$ nc -zv exemplo.com 443
+Connection to exemplo.com 443 port [tcp/*] succeeded!</pre>
+<p>O <code>nmap</code> faz o "scanner de salas": testa várias portas de uma vez e lista quais estão abertas:</p>
+<pre class="term">$ nmap exemplo.com
+Nmap scan report for exemplo.com (93.184.216.34)
+Host is up (0.023s latency).
+PORT    STATE  SERVICE
+80/tcp  open   http
+443/tcp open   https
+
+Nmap done: 1 IP address (1 host up) scanned in 2.41 seconds</pre>
+
+<div class="try" data-goal="succeeded" data-solucao="nc -zv exemplo.com 443">
+<p class="try-task"><strong>Missão:</strong> digite <code>nc -zv exemplo.com 443</code> e aperte <kbd>Enter</kbd>. Se aparecer <code>succeeded!</code>, a sala 443 do servidor está aberta.</p>
+</div>
+
+<div class="try" data-goal="Nmap done" data-solucao="nmap exemplo.com">
+<p class="try-task"><strong>Missão:</strong> agora rode <code>nmap exemplo.com</code> e veja o scanner listar as portas abertas (80 e 443) até imprimir <code>Nmap done</code>.</p>
+</div>
+
+<div class="warning">
+<strong>Scaneie só o que é seu.</strong>
+<p>Rodar <code>nmap</code> em servidores que não são seus pode ser considerado invasão — muitos provedores bloqueiam quem faz scan. Use essas ferramentas nos seus computadores, em máquinas de laboratório ou em alvos autorizados (existem sites como o <code>scanme.nmap.org</code> feitos para treino).</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Porta = número de 0 a 65535 que identifica o serviço dentro da máquina. IP = prédio, porta = sala.</li>
+  <li>Principais: 22 SSH, 53 DNS, 80 HTTP, 443 HTTPS, 8000 servidor de desenvolvimento.</li>
+  <li>Toda conversa tem porta de destino (a sala do servidor) e porta de origem aleatória (por onde a resposta volta).</li>
+  <li><code>nc -zv HOST PORTA</code> testa uma porta; <code>nmap HOST</code> escaneia várias. Só use em máquinas autorizadas.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="anatomia-url.html">Anatomia de uma URL</a> — onde a porta aparece escondida no endereço do site (https://… = porta 443).</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

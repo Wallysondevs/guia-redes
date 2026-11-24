@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Códigos de status HTTP (cola) — 200, 301, 404, 500 e todos os outros | Guia Redes</title>
+<meta name="description" content="Cola completa dos códigos de status HTTP por classe: 1xx informativos, 2xx sucesso (200 OK, 201 Created, 204 No Content, 206 Partial), 3xx redirecionamento (301, 302, 304, 307, 308), 4xx erro do cliente (400, 401, 403, 404, 405, 408, 429) e 5xx erro do servidor (500, 502, 503, 504) — com significado, causa típica e exemplo real de curl -i. Missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Códigos de <span class="hl">status HTTP</span> (cola)</h1>
+
+<p class="intro">Toda resposta HTTP começa com uma linha de status: <code>HTTP/1.1 200 OK</code>. O número de 3 dígitos diz <strong>em qual classe</strong> a resposta caiu — e a primeira letra da classe já conta a história: <strong>2xx</strong> = deu certo, <strong>3xx</strong> = mudou de lugar, <strong>4xx</strong> = você pediu errado, <strong>5xx</strong> = o servidor errou. Pense como a resposta do balconista: "aqui está" (2xx), "mudamos de endereço" (3xx), "você não pode pedir isso" (4xx), "nossa cozinha está com problema" (5xx).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A regra das classes: <strong>1xx</strong> informativo, <strong>2xx</strong> sucesso, <strong>3xx</strong> redirecionamento, <strong>4xx</strong> erro do cliente, <strong>5xx</strong> erro do servidor.</li>
+  <li>Os códigos que aparecem todo dia: 200, 201, 204, 301, 302, 304, 400, 401, 403, 404, 405, 408, 429, 500, 502, 503, 504.</li>
+  <li>A diferença entre 301 e 308, e entre 401 e 403.</li>
+  <li>Como ver o status na prática: <code>curl -i</code> (a 1ª linha da resposta).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>2xx — sucesso ("deu certo, aqui está")</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Código</th><th>Nome</th><th>Quando acontece</th></tr>
+<tr><td><code>200</code></td><td>OK</td><td>O pedido padrão funcionou: GET trouxe a página, POST funcionou. É o código que você mais vai ver.</td></tr>
+<tr><td><code>201</code></td><td>Created</td><td>Um POST criou um recurso novo com sucesso (ex.: cadastrou um usuário) — a resposta traz o recurso criado e, às vezes, um header <code>Location</code> com a URL dele.</td></tr>
+<tr><td><code>204</code></td><td>No Content</td><td>Deu certo, mas não tem corpo na resposta (comum em DELETE que deu certo).</td></tr>
+<tr><td><code>206</code></td><td>Partial Content</td><td>O servidor entregou só um pedaço do arquivo (Range) — é assim que o download retoma de onde parou e que o vídeo "pula" para outro trecho.</td></tr>
+</table>
+</div>
+
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+
+&lt;html&gt;…&lt;/html&gt;</pre>
+
+<hr>
+
+<h2>3xx — redirecionamento ("mudou de endereço")</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Código</th><th>Nome</th><th>Quando acontece / detalhe</th></tr>
+<tr><td><code>301</code></td><td>Moved Permanently</td><td>A URL mudou <strong>para sempre</strong>; o navegador guarda em cache. Ex.: <code>http://</code> → <code>https://</code>, ou domínio antigo → novo.</td></tr>
+<tr><td><code>302</code></td><td>Found</td><td>Redirecionamento <strong>temporário</strong> (o destino pode mudar depois). Ex.: após login, volta para a página que você queria.</td></tr>
+<tr><td><code>304</code></td><td>Not Modified</td><td>"Sua cópia em cache ainda vale" — o servidor não manda o arquivo de novo (economia de banda; vem com o header <code>ETag</code>/<code>Cache-Control</code>).</td></tr>
+<tr><td><code>307</code> / <code>308</code></td><td>Temporary / Permanent Redirect</td><td>Iguais ao 302/301, mas <strong>mantêm o método</strong> (um POST redirecionado continua POST — o 302 histórico mudava para GET).</td></tr>
+</table>
+</div>
+<p>O redirecionamento vem sempre com o header <code>Location: https://…</code> dizendo para onde ir. No curl, siga com <code>-L</code>.</p>
+
+<hr>
+
+<h2>4xx — erro do cliente ("você pediu errado")</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Código</th><th>Nome</th><th>Causa típica</th></tr>
+<tr><td><code>400</code></td><td>Bad Request</td><td>A requisição está malformada (JSON quebrado, header inválido).</td></tr>
+<tr><td><code>401</code></td><td>Unauthorized</td><td>Não autenticado: faltou token/senha. O servidor manda <code>WWW-Authenticate</code> dizendo como logar.</td></tr>
+<tr><td><code>403</code></td><td>Forbidden</td><td>Autenticado, mas <strong>sem permissão</strong> para aquele recurso (diferente do 401: aqui você entrou, mas não pode).</td></tr>
+<tr><td><code>404</code></td><td>Not Found</td><td>A URL não existe no servidor. <strong>A conexão funcionou</strong> — o recurso é que não foi achado (comum em API: <code>/usuarios/999</code>).</td></tr>
+<tr><td><code>405</code></td><td>Method Not Allowed</td><td>O método não é aceito naquela URL (ex.: fez POST numa rota só de GET).</td></tr>
+<tr><td><code>408</code></td><td>Request Timeout</td><td>Você demorou demais para mandar a requisição completa.</td></tr>
+<tr><td><code>429</code></td><td>Too Many Requests</td><td>Você fez pedidos demais em pouco tempo — o servidor pediu um limite (rate limit).</td></tr>
+</table>
+</div>
+
+<div class="try" data-goal="HTTP/2 404" data-solucao="curl -i https://api.exemplo.com/usuarios/999">
+<p class="try-task"><strong>Missão:</strong> provoque um 404 de verdade: rode <code>curl -i https://api.exemplo.com/usuarios/999</code> e veja <code>HTTP/2 404</code> + o JSON de erro.</p>
+</div>
+
+<pre class="term">$ curl -i http://exemplo.com/nao-existe
+HTTP/1.1 404 Not Found
+Server: nginx/1.25.3
+Content-Type: text/html
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+
+<hr>
+
+<h2>5xx — erro do servidor ("nossa cozinha errou")</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Código</th><th>Nome</th><th>Causa típica</th></tr>
+<tr><td><code>500</code></td><td>Internal Server Error</td><td>Erro genérico no servidor (bug no código, exceção não tratada). É problema do dono do site, não seu.</td></tr>
+<tr><td><code>502</code></td><td>Bad Gateway</td><td>Um proxy/gateway (ex.: Nginx na frente) não conseguiu falar com o servidor de trás.</td></tr>
+<tr><td><code>503</code></td><td>Service Unavailable</td><td>Servidor sobrecarregado ou em manutenção — tente de novo mais tarde (às vezes manda <code>Retry-After</code>).</td></tr>
+<tr><td><code>504</code></td><td>Gateway Timeout</td><td>O gateway esperou demais a resposta do servidor de trás e desistiu.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>1xx — informativo (raro no dia a dia)</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Código</th><th>Nome</th><th>Uso</th></tr>
+<tr><td><code>100</code></td><td>Continue</td><td>"Pode mandar o resto" — usado antes de enviar um corpo grande.</td></tr>
+<tr><td><code>101</code></td><td>Switching Protocols</td><td>Troca de protocolo na mesma conexão — é assim que o WebSocket começa (aula <a href="websockets.html">WebSockets</a>).</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Como ler o status na prática</h2>
+<pre class="term">$ curl -i https://api.exemplo.com/usuarios
+HTTP/2 200                 « primeira linha = versão + código + nome
+content-type: application/json
+
+[{…}]                     « corpo vem depois de uma linha em branco</pre>
+<p>Regra de bolso: <strong>2xx</strong> segue em frente; <strong>3xx</strong> siga o <code>Location</code> (ou use <code>curl -L</code>); <strong>4xx</strong> olhe o seu pedido (URL, método, autenticação); <strong>5xx</strong> é problema do servidor — recarregue mais tarde e, se persistir, avise o dono.</p>
+
+<div class="try" data-goal="HTTP/2 200" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://api.exemplo.com/usuarios</code> e confirme o <code>HTTP/2 200</code> na primeira linha.</p>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="ref-headers.html">Cabeçalhos HTTP comuns (cola)</a> — Host, Content-Type, Set-Cookie, Cache-Control, Authorization e amigos.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cabeçalhos (headers) HTTP de requisição e resposta | Guia Redes</title>
+<meta name="description" content="O que são headers HTTP: os metadados no envelope de cada requisição e resposta. Headers de requisição (Host, User-Agent, Accept, Authorization, Cookie) e de resposta (Content-Type, Content-Length, Set-Cookie, Cache-Control, Location, Strict-Transport-Security), como ver tudo com curl -i e curl -v, e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Headers</span> — o envelope da mensagem</h1>
+
+<p class="intro">Toda mensagem HTTP tem duas partes: o <strong>corpo</strong> (body — o conteúdo em si, a carta) e os <strong>headers</strong> (cabeçalhos — o envelope: remetente, destinatário, carimbos e instruções como "frágil" ou "urgente"). Nesta aula você aprende a ler os dois lados do envelope.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O formato de um header: <code>Nome: valor</code>, um por linha.</li>
+  <li>Headers de <strong>requisição</strong> (o que o cliente manda) e de <strong>resposta</strong> (o que o servidor devolve).</li>
+  <li>Os mais comuns: <code>Host</code>, <code>User-Agent</code>, <code>Accept</code>, <code>Content-Type</code>, <code>Set-Cookie</code>, <code>Cache-Control</code>…</li>
+  <li>Ver tudo isso no terminal com <code>curl -i</code> e <code>curl -v</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Anatomia de um header</h2>
+<p>Um header é sempre um par <code>nome: valor</code>:</p>
+<pre class="file">Content-Type: application/json</pre>
+<dl class="anatomy">
+  <dt>Content-Type:</dt><dd>O <strong>nome</strong> do header (não liga para maiúsculas/minúsculas).</dd>
+  <dt>application/json</dt><dd>O <strong>valor</strong>: aqui, "o corpo desta mensagem é JSON".</dd>
+</dl>
+
+<hr>
+
+<h2>O que o cliente envia (requisição)</h2>
+<p>Com <code>curl -v</code>, as linhas que começam com <code>&gt;</code> mostram os headers que o <em>cliente</em> mandou:</p>
+<pre class="term">$ curl -v https://exemplo.com
+* Trying 93.184.216.34:443...
+* Connected to exemplo.com (93.184.216.34) port 443
+> GET exemplo.com HTTP/1.1
+> Host: exemplo.com
+> User-Agent: curl/8.5.0
+> Accept: */*
+>
+* Connection #0 to host exemplo.com left intact</pre>
+<ul>
+  <li><code>Host: exemplo.com</code> — qual site está sendo pedido dentro do servidor (vários domínios podem dividir o mesmo IP).</li>
+  <li><code>User-Agent: curl/8.5.0</code> — quem é o cliente ("eu sou o curl, versão 8.5.0").</li>
+  <li><code>Accept: */*</code> — que tipos de conteúdo o cliente topa receber.</li>
+</ul>
+
+<hr>
+
+<h2>O que o servidor devolve (resposta)</h2>
+<p>Com <code>curl -i</code>, os headers da <em>resposta</em> aparecem antes do corpo:</p>
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1256
+Connection: keep-alive
+
+&lt;html&gt;&lt;head&gt;&lt;title&gt;Exemplo&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Exemplo.com&lt;/h1&gt;...&lt;/body&gt;&lt;/html&gt;</pre>
+<ul>
+  <li><code>HTTP/1.1 200 OK</code> — a <strong>linha de status</strong> (aula <a href="status-codes.html">Códigos de status</a>).</li>
+  <li><code>Server: nginx/1.25.3</code> — qual servidor atendeu.</li>
+  <li><code>Content-Type: text/html; charset=UTF-8</code> — o tipo do corpo que vem a seguir.</li>
+  <li><code>Content-Length: 1256</code> — o tamanho do corpo em bytes.</li>
+  <li><code>Connection: keep-alive</code> — a conexão TCP fica aberta para próximas requisições.</li>
+</ul>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> peça a página com os headers junto: <code>curl -i http://exemplo.com</code> — repare na linha <code>200 OK</code> e nos headers antes do HTML.</p>
+</div>
+
+<hr>
+
+<h2>Os headers mais comuns</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Header</th><th>Lado</th><th>Para que serve</th></tr>
+<tr><td><code>Host</code></td><td>requisição</td><td>Diz qual domínio está sendo pedido (vários sites dividem o mesmo IP).</td></tr>
+<tr><td><code>User-Agent</code></td><td>requisição</td><td>Identifica o cliente: navegador, curl, app de celular…</td></tr>
+<tr><td><code>Accept</code></td><td>requisição</td><td>Tipos de conteúdo aceitos: <code>text/html</code>, <code>application/json</code>…</td></tr>
+<tr><td><code>Content-Type</code></td><td>req. e resp.</td><td>O tipo do corpo da mensagem (HTML, JSON, imagem…).</td></tr>
+<tr><td><code>Content-Length</code></td><td>resposta</td><td>Tamanho do corpo em bytes.</td></tr>
+<tr><td><code>Authorization</code></td><td>requisição</td><td>Credencial de acesso (token) — <strong>só por HTTPS</strong>!</td></tr>
+<tr><td><code>Cookie</code></td><td>requisição</td><td>Cookies guardados, mandados de volta (aula <a href="cookies-sessoes.html">Cookies e sessões</a>).</td></tr>
+<tr><td><code>Set-Cookie</code></td><td>resposta</td><td>Manda um cookie novo para o navegador guardar.</td></tr>
+<tr><td><code>Cache-Control</code></td><td>resposta</td><td>Regras de cache: "não guarde", "guarde por 1 hora"…</td></tr>
+<tr><td><code>Location</code></td><td>resposta</td><td>Para onde redirecionar (vem com 301/302).</td></tr>
+<tr><td><code>Strict-Transport-Security</code></td><td>resposta</td><td>"Só fale comigo por HTTPS" (HSTS — aula <a href="https-tls.html">HTTPS/TLS</a>).</td></tr>
+</table>
+</div>
+
+<div class="try" data-goal="content-type: application/json" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> peça o JSON da API e ache o header do tipo de conteúdo: <code>curl -i https://api.exemplo.com/usuarios</code></p>
+</div>
+
+<div class="try" data-goal="User-Agent: curl" data-solucao="curl -v https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> veja os headers que o <em>seu</em> cliente envia (linhas com <code>&gt;</code>): <code>curl -v https://exemplo.com</code></p>
+</div>
+
+<div class="try" data-goal="strict-transport-security" data-solucao="curl -i https://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> ache o header HSTS na resposta HTTPS: <code>curl -i https://exemplo.com</code> (ponte para a aula de HTTPS).</p>
+</div>
+
+<div class="warning">
+<strong>CUIDADO:</strong> nunca ponha senha, token ou cookie na <strong>URL</strong> — a URL aparece no histórico, nos logs do servidor e nos logs do roteador. Mande dados sensíveis no <strong>corpo</strong> da requisição ou no header <code>Authorization</code>, sempre por <strong>HTTPS</strong>.
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">Qual header o cliente manda para devolver um cookie guardado?</p>
+<label><input type="radio" name="q1"> <code>Host</code></label>
+<label><input type="radio" name="q1"> <code>Cookie</code></label>
+<label><input type="radio" name="q1"> <code>Accept</code></label>
+<label><input type="radio" name="q1"> <code>Server</code></label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Header = par <code>Nome: valor</code>, um por linha, no "envelope" da mensagem HTTP (corpo vai depois, em branco).</li>
+  <li>Na <strong>requisição</strong> o cliente manda <code>Host</code>, <code>User-Agent</code>, <code>Accept</code>, <code>Cookie</code>, <code>Authorization</code>…</li>
+  <li>Na <strong>resposta</strong> o servidor manda <code>Content-Type</code>, <code>Content-Length</code>, <code>Set-Cookie</code>, <code>Cache-Control</code>, <code>Location</code>…</li>
+  <li><code>curl -i</code> mostra a resposta com headers; <code>curl -v</code> mostra também o que foi enviado (linhas <code>&gt;</code>).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="status-codes.html">Códigos de status HTTP (200, 301, 404, 500…)</a> — a primeira linha da resposta, em 3 dígitos, dizendo o que aconteceu.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

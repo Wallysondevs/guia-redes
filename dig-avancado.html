@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>dig avançado: +short, +trace, tipos específicos e @servidor | Guia Redes</title>
+<meta name="description" content="As opções do dig que resolvem problemas de verdade: +short (só a resposta, ideal para scripts), +trace (a jornada raiz → TLD → autoritativo), dig HOST TIPO (A, MX, TXT…), dig @8.8.8.8 (perguntar a outro resolver) e como ler NXDOMAIN. Anatomia das seções da resposta do dig e missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">dig avançado</span> — além do básico</h1>
+
+<p class="intro">Na aula <a href="comando-dig.html">dig/nslookup</a> você fez a consulta simples. Agora as opções que transformam o dig numa lupa de DNS: <code>+short</code> (só a resposta), <code>+trace</code> (o caminho inteiro), o tipo específico (<code>dig HOST MX</code>) e trocar de servidor com <code>@</code>.</p>
+
+<div class="note">
+<strong>Sintaxe geral</strong>
+<pre class="file">dig [@servidor] HOST [TIPO] [+short|+trace]</pre>
+</div>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li><code>+short</code> — só o valor da resposta (perfeito para scripts).</li>
+  <li><code>+trace</code> — a jornada raiz → TLD → autoritativo.</li>
+  <li><code>dig HOST TIPO</code> — perguntar um tipo específico (A, MX, TXT…).</li>
+  <li><code>dig @8.8.8.8 HOST</code> — perguntar para outro resolver.</li>
+  <li>Ler as seções da resposta e interpretar <code>NXDOMAIN</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>+short: só a resposta</h2>
+<p>Com <code>+short</code>, o dig imprime <strong>somente o valor</strong> — ideal para guardar num script:</p>
+<pre class="term">$ dig exemplo.com +short
+93.184.216.34
+$ dig google.com +short
+142.250.72.142
+$ dig exemplo.com +short | head -1     « num servidor real, pega só a 1ª linha</pre>
+
+<div class="try" data-goal="93.184.216.34" data-solucao="dig exemplo.com +short">
+<p class="try-task"><strong>Missão:</strong> pegue só o IP, sem o resto da resposta: <code>dig exemplo.com +short</code></p>
+</div>
+
+<hr>
+
+<h2>+trace: a jornada completa</h2>
+<p>O <code>+trace</code> começa na <strong>raiz</strong> e vai perguntando andar por andar até chegar na resposta final (aula <a href="como-dns-funciona.html">DNS a fundo</a>):</p>
+<pre class="term">$ dig exemplo.com +trace
+; &lt;&lt;&gt;&gt; DiG 9.18 &lt;&lt;&gt;&gt; +trace exemplo.com
+;; global options: +cmd
+.                       518400  IN  NS  a.root-servers.net.    « a raiz: "quem cuida de .com?"
+;; Received 239 bytes from 192.168.1.1#53(192.168.1.1) in 4 ms
+
+com.                    172800  IN  NS  a.gtld-servers.net.     « o TLD .com: "quem cuida de exemplo.com?"
+
+exemplo.com.            86400   IN  NS  ns1.exemplo.com.       « o autoritativo: tem a resposta
+
+exemplo.com.            3600    IN  A   93.184.216.34         « a resposta final
+;; Query time: 38 msec
+;; SERVER: 8.8.8.8#53(8.8.8.8)</pre>
+
+<div class="try" data-goal="gtld-servers" data-solucao="dig exemplo.com +trace">
+<p class="try-task"><strong>Missão:</strong> siga o rastro até o TLD .com: <code>dig exemplo.com +trace</code> — ache <code>gtld-servers</code></p>
+</div>
+
+<hr>
+
+<h2>Trocando de servidor: @servidor</h2>
+<p>Com <code>@</code> você escolhe <strong>qual resolver</strong> faz a pergunta — útil para comparar respostas:</p>
+<pre class="file">dig @8.8.8.8 exemplo.com        « pergunta direto no DNS do Google
+dig @192.168.1.1 exemplo.com    « pergunta no roteador (resolver local)</pre>
+<p>Se o roteador devolver um IP diferente do 8.8.8.8, o cache dele está sujo ou há algum redirecionamento esquisito na rede.</p>
+
+<hr>
+
+<h2>Lendo as seções da resposta</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Seção</th><th>O que mostra</th></tr>
+<tr><td><code>;; HEADER</code></td><td>O status da consulta: <code>NOERROR</code> (deu certo) ou <code>NXDOMAIN</code> (domínio não existe).</td></tr>
+<tr><td><code>;; QUESTION SECTION</code></td><td>O que foi perguntado (nome + tipo).</td></tr>
+<tr><td><code>;; ANSWER SECTION</code></td><td>A resposta: nome, <strong>TTL</strong> (segundos), tipo e valor.</td></tr>
+<tr><td><code>;; SERVER / Query time</code></td><td>Qual resolver respondeu e em quanto tempo.</td></tr>
+</table>
+</div>
+<pre class="term">$ dig naoexiste.com
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 7312
+;; QUESTION SECTION:
+;naoexiste.com.         IN      A
+
+;; ANSWER SECTION:
+
+;; Query time: 12 msec
+;; SERVER: 192.168.1.1#53(192.168.1.1)</pre>
+
+<div class="try" data-goal="NXDOMAIN" data-solucao="dig naoexiste.com">
+<p class="try-task"><strong>Missão:</strong> provoque um <code>NXDOMAIN</code> perguntando um domínio que não existe: <code>dig naoexiste.com</code></p>
+</div>
+
+<div class="try" data-goal="Non-authoritative answer" data-solucao="nslookup exemplo.com">
+<p class="try-task"><strong>Missão:</strong> compare com o <code>nslookup</code> (saída mais simples, mesma resposta): <code>nslookup exemplo.com</code></p>
+</div>
+
+<div class="warning">
+<strong>Dois erros clássicos de DNS:</strong>
+<ul>
+  <li><code>NXDOMAIN</code> = o domínio <strong>não existe</strong> (erro de digitação ou registro nunca feito).</li>
+  <li><code>connection timed out; no servers could be reached</code> = o servidor DNS <strong>não respondeu</strong> (rede caída ou resolver fora do ar).</li>
+</ul>
+<p>Para diagnosticar, compare <code>dig exemplo.com</code> (resolver local) com <code>dig @8.8.8.8 exemplo.com</code> (outro resolver).</p>
+</div>
+
+<div class="mc" data-answer="1">
+<p class="mc-q">O que o <code>dig +short</code> faz?</p>
+<label><input type="radio" name="q1"> Mostra somente o valor da resposta (ex.: só o IP)</label>
+<label><input type="radio" name="q1"> Faz a consulta mais rápido</label>
+<label><input type="radio" name="q1"> Mostra só os erros</label>
+<label><input type="radio" name="q1"> Criptografa a consulta</label>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Sintaxe: <code>dig [@servidor] HOST [TIPO] [+short|+trace]</code>.</li>
+  <li><code>+short</code> = só o valor; <code>+trace</code> = raiz → TLD → autoritativo; <code>TIPO</code> = A, MX, TXT…; <code>@8.8.8.8</code> = trocar de resolver.</li>
+  <li>Leia o HEADER: <code>NOERROR</code> = ok; <code>NXDOMAIN</code> = domínio não existe; timeout = resolver não respondeu.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="arquivo-hosts.html">/etc/hosts: o DNS local da sua máquina</a> — a tabela de nomes que tem prioridade sobre o DNS e mora no seu próprio computador.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

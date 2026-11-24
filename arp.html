@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARP: traduzir IP em endereço MAC na rede local | Guia Redes</title>
+<meta name="description" content="O ARP (Address Resolution Protocol) traduz o endereço IP (o 'número do apartamento') no endereço MAC (a 'placa do carro na garagem') dentro da rede local: funciona com uma pergunta em broadcast ('quem tem o 192.168.1.1?') e uma resposta ('eu! meu MAC é 00:11:22:33:44:55'). Como ver a tabela ARP com arp -a, por que o ARP só vale dentro da sub-rede (para fora usa o MAC do gateway) e o perigo do conflito de IP. Missões no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>ARP: de <span class="hl">IP</span> para MAC</h1>
+
+<p class="intro">O IP é o endereço lógico ("apartamento 192.168.1.1"), mas a placa de rede só entende endereços físicos: o <strong>MAC</strong> (ex.: <code>00:11:22:33:44:55</code>) — pense nele como a placa do carro na garagem do prédio. Dentro da rede local, para entregar um pacote ao vizinho, o computador precisa traduzir o IP em MAC. Quem faz essa tradução é o <strong>ARP</strong> (Address Resolution Protocol): o computador pergunta em voz alta na rede — <em>"quem tem o IP 192.168.1.1?"</em> (pergunta em broadcast, para todos) — e o dono responde <em>"sou eu! meu MAC é 00:11:22:33:44:55"</em>. A resposta fica anotada numa tabelinha, a <strong>tabela ARP</strong>.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o endereço <strong>MAC</strong> (48 bits, único por placa de rede, ex.: <code>aa:bb:cc:dd:ee:ff</code>).</li>
+  <li>Como o ARP funciona: <strong>ARP request</strong> em broadcast + <strong>ARP reply</strong> com o MAC.</li>
+  <li>A ver a tabela ARP com <code>arp -a</code>.</li>
+  <li>Por que o ARP só vale <strong>dentro da rede local</strong>: para destinos de fora, o MAC usado é o do gateway.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O passo a passo na rede da Ana</h2>
+<p>O notebook (<code>192.168.1.50</code>, MAC <code>aa:bb:cc:dd:ee:ff</code>) quer mandar um pacote para o roteador (<code>192.168.1.1</code>), que está na mesma sub-rede /24:</p>
+<dl class="anatomy">
+  <dt>1. Consulta a tabela ARP</dt><dd>O notebook olha a própria tabelinha: "já sei o MAC do 192.168.1.1?" Se não souber, segue.</dd>
+  <dt>2. ARP request (broadcast)</dt><dd>Manda para <em>todos</em> da rede (MAC de destino <code>ff:ff:ff:ff:ff:ff</code>): "Quem tem o IP 192.168.1.1? Responda para 192.168.1.50".</dd>
+  <dt>3. ARP reply (unicast)</dt><dd>Só o roteador responde, direto para o notebook: "192.168.1.1 está no MAC 00:11:22:33:44:55".</dd>
+  <dt>4. Tabela ARP atualizada</dt><dd>O notebook grava <code>192.168.1.1 → 00:11:22:33:44:55</code> na tabela (por alguns minutos) e manda o pacote encapsulado no quadro Ethernet com esse MAC de destino.</dd>
+</dl>
+
+<hr>
+
+<h2>Vendo a tabela ARP</h2>
+<pre class="term">$ arp -a
+Address                  HWtype  HWaddress           Flags Mask  Iface
+192.168.1.1              ether   00:11:22:33:44:55   C          eth0
+192.168.1.60             ether   66:77:88:99:aa:bb   C          eth0</pre>
+<dl class="anatomy">
+  <dt>Address</dt><dd>O endereço IP já descoberto.</dd>
+  <dt>HWtype ether</dt><dd>Tipo de hardware: Ethernet.</dd>
+  <dt>HWaddress</dt><dd>O <strong>MAC</strong> correspondente — é essa coluna que o ARP Descobriu.</dd>
+  <dt>Flags C</dt><dd>Entrada completa (dinâmica, aprendida na rede).</dd>
+  <dt>Iface</dt><dd>A placa de rede por onde a entrada vale (eth0).</dd>
+</dl>
+
+<div class="try" data-goal="64 bytes from 192.168.1.1" data-solucao="ping 192.168.1.1">
+<p class="try-task"><strong>Missão:</strong> rode <code>ping 192.168.1.1</code> — para mandar esse ping, o computador precisou antes fazer o ARP do 192.168.1.1 (descobrir o MAC dele).</p>
+</div>
+
+<div class="try" data-goal="00:11:22:33:44:55" data-solucao="arp -a">
+<p class="try-task"><strong>Missão:</strong> agora rode <code>arp -a</code> e veja a tabela ARP: o IP <code>192.168.1.1</code> está casado com o MAC <code>00:11:22:33:44:55</code>.</p>
+</div>
+
+<hr>
+
+<h2>ARP só funciona dentro da rede local</h2>
+<p>O ARP request é um broadcast — e broadcast <strong>não atravessa roteador</strong>. Então, quando o destino está <em>fora</em> da sub-rede (ex.: <code>exemplo.com</code> = 93.184.216.34), o computador não faz ARP do destino: ele faz ARP <strong>do gateway</strong> (192.168.1.1) e manda o pacote para o MAC do roteador. Quem cuida do resto do caminho é o roteador (aula <a href="como-pacotes-viajam.html">traceroute</a>). Resumindo:</p>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Destino do pacote</th><th>ARP de quem é feito?</th><th>MAC de destino do quadro</th></tr>
+<tr><td>Dentro de 192.168.1.0/24 (ex.: 192.168.1.60)</td><td>Do próprio destino</td><td>MAC do destino</td></tr>
+<tr><td>Fora da rede (ex.: 93.184.216.34)</td><td><strong>Do gateway 192.168.1.1</strong></td><td>MAC do roteador (00:11:22:33:44:55)</td></tr>
+</table>
+</div>
+
+<div class="warning">
+<strong>Conflito de IP estraga o ARP</strong>
+<p>Se dois dispositivos da mesma rede tiverem o mesmo IP (ex.: dois 192.168.1.50 configurados na mão), os dois respondem o ARP request — um de cada vez — e a tabela ARP fica alternando entre os dois MACs. Resultado: a conexão fica intermitente, "às vezes abre, às vezes não". A tabela ARP é dinâmica e as entradas expiram, por isso o problema vai e volta.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>MAC = endereço físico da placa de rede (48 bits, único no mundo); IP = endereço lógico da rede.</li>
+  <li>ARP traduz IP → MAC <strong>na rede local</strong>: pergunta em broadcast, resposta em unicast, resultado guardado na tabela ARP.</li>
+  <li>Veja a tabela com <code>arp -a</code>; o comando <code>ip addr</code> mostra o MAC da sua placa (link/ether).</li>
+  <li>Para destinos fora da sub-rede, o ARP é feito do <strong>gateway</strong>, não do destino final.</li>
+</ul>
+
+<div class="mc" data-answer="3">
+<p class="mc-q">O ARP serve para traduzir o quê?</p>
+<label><input type="radio" name="q1"> Nome de domínio em IP (isso é DNS)</label>
+<label><input type="radio" name="q1"> IP público em IP privado (isso é NAT)</label>
+<label><input type="radio" name="q1"> Endereço IP em endereço MAC, dentro da rede local</label>
+<label><input type="radio" name="q1"> Porta TCP em porta UDP</label>
+</div>
+
+<div class="mc" data-answer="2">
+<p class="mc-q">O notebook da Ana quer mandar um pacote para <code>exemplo.com</code> (fora da rede local). O ARP é feito com quem?</p>
+<label><input type="radio" name="q2"> Com o próprio servidor 93.184.216.34</label>
+<label><input type="radio" name="q2"> Com o gateway padrão 192.168.1.1 (o roteador)</label>
+<label><input type="radio" name="q2"> Com o servidor DNS 8.8.8.8</label>
+<label><input type="radio" name="q2"> Com ninguém — o pacote vai direto</label>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="tcp-vs-udp.html">TCP vs UDP: ligação telefônica com recibo vs rádio</a> — agora que o pacote sai da rede local, vamos ver os dois protocolos de transporte que carregam os dados dentro dele.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

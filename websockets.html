@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebSockets: conversa contínua | Guia Redes</title>
+<meta name="description" content="WebSockets explicado com a analogia do telefone que fica aberto: diferente do HTTP (liga, pede, desliga), o WebSocket mantém a conexão aberta nos dois sentidos (full-duplex) para chat, notificações, jogos e cotações em tempo real. O upgrade do HTTP (101 Switching Protocols), ws:// vs wss://, riscos (CSWSH, origem) e missão com nc no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">WebSockets</span>: conversa contínua</h1>
+
+<p class="intro">O HTTP é como telefonar: você liga, faz <strong>um</strong> pedido, recebe a resposta e desliga. E se você precisasse de atualizações o tempo todo — um chat, o placar de um jogo, a cotação da bolsa? Ligar e desligar a cada 2 segundos seria um desastre. O <strong>WebSocket</strong> é a linha telefônica que <strong>fica aberta</strong>: depois de aberta, os dois lados falam quando quiserem, nos dois sentidos, na mesma conexão.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>A diferença entre HTTP (requisição/resposta) e WebSocket (full-duplex contínuo);</li>
+  <li>Como a conexão começa: o <strong>upgrade</strong> do HTTP com <code>101 Switching Protocols</code>;</li>
+  <li><code>ws://</code> × <code>wss://</code> (o "s" é o TLS — obrigatório na prática);</li>
+  <li>Casos de uso reais: chat, notificações, jogos, edição colaborativa, IoT;</li>
+  <li>Os riscos: CSWSH, validar a origem, e o que acontece quando a conexão cai.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Do HTTP para o WebSocket: o handshake de upgrade</h2>
+<p>O WebSocket <strong>começa como um pedido HTTP normal</strong>, com um detalhe no header: <code>Upgrade: websocket</code>. Se o servidor aceitar, ele responde <code>101 Switching Protocols</code> e a partir daí a conexão vira um túnel aberto nos dois sentidos — não é mais HTTP:</p>
+
+<pre class="term">GET /chat HTTP/1.1
+Host: exemplo.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+Sec-WebSocket-Version: 13
+
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=</pre>
+
+<p>Depois do <code>101</code>, as duas pontas trocam <strong>frames</strong> leves (mínimo de 2 bytes de header) a qualquer momento, para qualquer lado — sem precisar de novo handshake TCP/TLS. Em JavaScript no navegador é um <code>new WebSocket("wss://exemplo.com/chat")</code>.</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th></th><th>HTTP (e HTTP/2, HTTP/3)</th><th>WebSocket</th></tr>
+<tr><td>Modelo</td><td>Cliente pede, servidor responde (e fecha)</td><td>Conexão aberta, <strong>os dois falam quando quiserem</strong></td></tr>
+<tr><td>Sentido</td><td>Half-duplex por pedido</td><td><strong>Full-duplex</strong> (dois sentidos ao mesmo tempo)</td></tr>
+<tr><td>Overhead</td><td>Headers em toda requisição</td><td>Frames mínimos (2+ bytes)</td></tr>
+<tr><td>Uso típico</td><td>Páginas, APIs REST</td><td>Chat, notificações push, jogos, bolsa de valores, edição colaborativa (Google Docs), IoT</td></tr>
+<tr><td>URL</td><td><code>http://</code> / <code>https://</code></td><td><code>ws://</code> / <code>wss://</code> (com TLS)</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Por que não usar HTTP puro para isso?</h2>
+<p>Dá para simular tempo real com HTTP: o cliente fica perguntando "tem novedade?" a cada segundo (<em>polling</em>) — gasta banda e bateria, e a atualização chega atrasada. Ou o servidor segura a resposta até ter novedade (<em>long polling</em>) — funciona, mas cada pedido ocupa uma conexão e um processo no servidor. O WebSocket resolve limpamente: <strong>uma conexão, mensagens instantâneas nos dois lados</strong>. Por isso chat (WhatsApp Web), jogos online e dashboards em tempo real usam WebSocket (ou o primo moderno dele, <strong>Server-Sent Events</strong> para fluxo servidor→cliente só).</p>
+
+<hr>
+
+<h2>Cuidados de segurança</h2>
+<ul>
+  <li><strong>Use sempre <code>wss://</code></strong> (WebSocket sobre TLS), como o <code>https://</code> — <code>ws://</code> vai em texto claro;</li>
+  <li><strong>Valide o header <code>Origin</code></strong> no servidor: senão outro site pode abrir um WebSocket no navegador do usuário e atacar sua aplicação (CSWSH — Cross-Site WebSocket Hijacking), usando a sessão logada da vítima;</li>
+  <li><strong>Autentique a conexão</strong> (token na URL ou no primeiro frame) — o WebSocket em si não tem login;</li>
+  <li>Trate a <strong>queda da conexão</strong>: reconectar com backoff, avisar o usuário, não perder mensagens (a conexão cai fácil em celular trocando de Wi-Fi para 4G);</li>
+  <li>O WebSocket passa pelo <a href="proxy-reverso.html">proxy reverso</a> e pela <a href="cdn.html">CDN</a> — eles precisam estar configurados para segurar a conexão aberta (timeout longo).</li>
+</ul>
+
+<div class="try" data-goal="succeeded" data-solucao="nc -zv exemplo.com 443">
+<p class="try-task"><strong>Missão:</strong> rode <code>nc -zv exemplo.com 443</code> e veja <code>succeeded!</code> — é uma conexão TCP que <strong>fica aberta</strong> com o servidor, a mesma ideia do WebSocket (que, por baixo, também é TCP na porta 443 com wss). rode também <code>ss -tlnp</code> para ver as portas locais escutando.</p>
+</div>
+
+<div class="warning">
+<strong>WebSocket não é mágica infinita</strong>
+<p>Cada conexão aberta consome memória no servidor — um servidor aguenta dezenas de milhares de WebSockets, não milhões (diferente de pedidos HTTP curtos). Para escala gigante usam-se soluções como Socket.IO, SSE, ou serviços gerenciados. E o WebSocket não substitui o HTTP: páginas e APIs continuam em HTTP; o WebSocket entra só onde o tempo real importa.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>HTTP = liga, pede, desliga. <strong>WebSocket = conexão aberta, full-duplex</strong>, para mensagens em tempo real nos dois lados.</li>
+  <li>Começa com um pedido HTTP com <code>Upgrade: websocket</code>; o servidor responde <code>101 Switching Protocols</code> e vira túnel.</li>
+  <li>Use <strong>wss://</strong> (TLS), valide <code>Origin</code>, autentique a conexão e trate a reconexão.</li>
+  <li>Casos de uso: chat, notificações, jogos, cotações, edição colaborativa. Complementa o HTTP — não substitui.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="compressao.html">Compressão: gzip, Brotli</a> — para a conversa trafegar ainda mais leve.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

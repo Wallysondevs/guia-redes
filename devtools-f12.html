@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DevTools (F12) — a aba Network do navegador | Guia Redes</title>
+<meta name="description" content="Como usar o DevTools do navegador (F12 ou Ctrl+Shift+I / Cmd+Opt+I) e a aba Network (Rede): ver cada requisição que a página faz, com nome, status (200, 404…), tipo, tamanho e tempo; os filtros (Doc, Fetch/XHR, WS, Img); o painel de uma requisição com Headers (pedido e resposta), Preview, Response e Timing (waterfall). Equivalente na linha de comando: curl -i. Missão no simulador: curl -i https://api.exemplo.com/usuarios (cabeçalho content-type: application/json).">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>DevTools <span class="hl">(F12)</span>: ver a rede no navegador</h1>
+
+<p class="intro">Você não precisa de terminal para <strong>ver a rede acontecendo</strong>: o próprio navegador tem uma central de controle escondida. Aperte <kbd>F12</kbd> (ou <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> no Windows/Linux, <kbd>Cmd</kbd>+<kbd>Opt</kbd>+<kbd>I</kbd> no Mac), vá na aba <strong>Network</strong> (Rede) e recarregue a página: cada pedido que o site faz aparece na lista, com status, tamanho e tempo.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Abrir o DevTools: <kbd>F12</kbd> ou clique direito → "Inspecionar".</li>
+  <li>A aba <strong>Network</strong>: a lista de requisições da página (documento, CSS, JS, imagens, XHR/Fetch = chamadas de API).</li>
+  <li>As colunas: Name, Status (200, 404…), Type, Size e Time — e o gráfico de tempo (waterfall).</li>
+  <li>Clicar numa requisição: abas <strong>Headers</strong> (cabeçalhos do pedido e da resposta), Preview, Response e Timing.</li>
+  <li>O equivalente na linha de comando: <code>curl -i</code> — mesma informação, modo texto.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Abrindo o DevTools</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Atalho</th><th>Onde</th></tr>
+<tr><td><kbd>F12</kbd></td><td>Windows, Linux e ChromeOS</td></tr>
+<tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd></td><td>Windows/Linux (alternativo)</td></tr>
+<tr><td><kbd>Cmd</kbd>+<kbd>Opt</kbd>+<kbd>I</kbd></td><td>macOS</td></tr>
+<tr><td>Clique direito na página → <strong>Inspecionar</strong></td><td>Qualquer sistema</td></tr>
+</table>
+</div>
+<p>O DevTools abre encaixado embaixo (ou do lado). Clique na aba <strong>Network</strong> (em português, às vezes aparece como "Rede").</p>
+
+<hr>
+
+<h2>A aba Network: cada pedido da página</h2>
+<p>Com a aba Network aberta, <strong>recarregue a página</strong> (<kbd>F5</kbd>) — e observe: a página não é um pedido só. Abrir um site dispara dezenas de requisições:</p>
+<ul>
+  <li>O <strong>documento</strong> HTML principal (filter <em>Doc</em>);</li>
+  <li>CSS, JavaScript, fontes e <strong>imagens</strong> (<em>CSS</em>, <em>JS</em>, <em>Img</em>);</li>
+  <li>Chamadas de <strong>API</strong> que buscan dados em JSON (<em>Fetch/XHR</em>);</li>
+  <li><em>WS</em> = WebSockets (conexão contínua, ex.: chat).</li>
+</ul>
+<p>Cada linha da lista mostra: <strong>Name</strong> (a URL pedida), <strong>Status</strong> (200 verde, 404 vermelho…), <strong>Type</strong> (document, xhr, png…), <strong>Size</strong> (quanto transferiu) e <strong>Time</strong> (quanto demorou). Embaixo, o <strong>waterfall</strong> desenha quanto tempo cada pedido levou, um do lado do outro.</p>
+
+<hr>
+
+<h2>Clicando numa requisição</h2>
+<p>Clique em qualquer linha da lista para abrir o detalhe dela:</p>
+<dl class="anatomy">
+  <dt>Headers</dt><dd>Os <strong>cabeçalhos</strong>: em cima, a resposta (status 200, content-type, server…); embaixo, o pedido (GET, Host, User-Agent, Cookie…). É a mesma conversa que o <code>curl -i</code> mostra.</dd>
+  <dt>Preview / Response</dt><dd>A resposta "bonitinha" (JSON formatado, imagem renderizada) ou o texto puro.</dd>
+  <dt>Timing</dt><dd>O detalhamento do tempo: quanto esperou o DNS, conectou, enviou o pedido e esperou a resposta (TTFB).</dd>
+</dl>
+<p>É assim que se descobre "por que o site está lento": abre o Network, recarrega e olha qual requisição demorou mais ou deu erro.</p>
+
+<hr>
+
+<h2>O mesmo no terminal: curl -i</h2>
+<p>Tudo o que a aba Network mostra, o <code>curl -i</code> mostra em texto — por isso os dois andam juntos. Exemplo: chamar a API fictícia e ver o cabeçalho dizendo que a resposta é JSON:</p>
+<pre class="term">$ curl -i https://api.exemplo.com/usuarios
+HTTP/2 200
+content-type: application/json
+content-length: 87
+
+[{"id":1,"nome":"Ana"},{"id":2,"nome":"Beto"},{"id":3,"nome":"Carla"}]</pre>
+<p>Na aba Network, essa mesma chamada apareceria como uma linha <code>usuarios</code> do tipo <em>fetch</em>, status <code>200</code>, e na aba Preview o JSON bonitinho.</p>
+
+<div class="try" data-goal="application/json" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i https://api.exemplo.com/usuarios</code> e aperte <kbd>Enter</kbd>. Nos cabeçalhos da resposta, procure <code>content-type: application/json</code> — é a API dizendo "o que eu te mandei são dados, não página". No navegador, abra o F12 → Network e ache uma requisição assim no seu site favorito.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li><kbd>F12</kbd> abre o DevTools; a aba <strong>Network</strong> lista todas as requisições que a página faz ao recarregar.</li>
+  <li>Colunas: Name, Status (200/404…), Type, Size, Time + o gráfico waterfall de tempos.</li>
+  <li>Clicando na requisição: Headers (pedido e resposta), Preview/Response (o conteúdo) e Timing (onde o tempo foi gasto).</li>
+  <li>Na linha de comando, o equivalente é o <code>curl -i</code> — mesma conversa em texto.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="classes-ipv4.html">Classes IPv4 e CIDR</a> (Nível 2) — por que hoje todo mundo usa <code>/24</code> e não as "classes" A/B/C antigas.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

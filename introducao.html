@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que é uma rede e a internet — a analogia do correio | Guia Redes</title>
+<meta name="description" content="O que é uma rede de computadores e o que é a internet: a analogia do correio (carta = pacote, CEP = endereço IP, centro de distribuição = roteador), a internet como rede de redes, o que é um pacote e a máquina fictícia deste guia (ana@notebook, 192.168.1.50/24, gateway 192.168.1.1). Primeiro contato com o terminal simulado: help e ping.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>O que é uma <span class="hl">rede</span> — e a internet</h1>
+
+<p class="intro">Toda vez que você abre um site ou manda uma mensagem, seus dados viram <strong>pequenas cartas numeradas</strong> (os <em>pacotes</em>) que viajam por cabos de rede, Wi-Fi e até cabos submarinos no fundo do mar até chegarem ao destino. Nesta aula você aprende a ideia de rede com a <strong>analogia do correio</strong> — e faz seus primeiros comandos no terminal simulado desta página.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é uma <strong>rede</strong> (dois ou mais computadores trocando dados) e o que é a <strong>internet</strong> (uma rede de redes).</li>
+  <li>A analogia do correio: carta = pacote, CEP = endereço IP, centro de distribuição = roteador.</li>
+  <li>O que é um <strong>pacote</strong> e por que um arquivo grande é quebrado em vários.</li>
+  <li>Quem é a máquina fictícia deste guia: <code>ana@notebook</code> na rede 192.168.1.0/24.</li>
+  <li>Seus dois primeiros comandos no simulador: <code>help</code> e <code>ping exemplo.com</code>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia do correio</h2>
+<p>Pense em mandar uma carta pelo correio:</p>
+<ul>
+  <li>A <strong>carta</strong> é o dado que você quer enviar — uma página, uma foto, um vídeo.</li>
+  <li>No envelope vão o <strong>endereço de quem envia</strong> e o <strong>endereço de quem recebe</strong> (o "CEP" de cada um).</li>
+  <li>O <strong>centro de distribuição dos correios</strong> lê o CEP e decide para onde encaminhar a carta — às vezes passando por 2 ou 3 centros antes do destino.</li>
+  <li>Se a carta é grande demais para um envelope, você <strong>quebra em várias cartas numeradas</strong> ("1 de 5", "2 de 5"…) e o destinatário junta tudo no fim.</li>
+</ul>
+<p>Numa rede de computadores acontece <strong>exatamente a mesma coisa</strong>: o dado vira <strong>pacotes</strong>, cada pacote leva o <strong>IP de origem</strong> e o <strong>IP de destino</strong>, e os <strong>roteadores</strong> no meio do caminho encaminham cada pacote até o destino.</p>
+
+<hr>
+
+<h2>A internet é uma "rede de redes"</h2>
+<p>Uma <strong>rede</strong> é qualquer conjunto de computadores que consegue conversar — pode ser só o seu notebook e a sua impressora em casa. A <strong>internet</strong> é quando <em>milhões de redes do mundo inteiro</em> se conectam entre si por enlaces que cruzam cidades, países e oceanos (fibra óptica terrestre e cabos submarinos).</p>
+<p>Na analogia de estradas: cada rede local é um <strong>quarteirão</strong>, os enlaces entre elas são as <strong>ruas e rodovias</strong>, e a internet é o mapa inteiro. Não existe "um computador da internet" — existem BILHÕES de máquinas ligadas por essas estradas, e o seu pacote escolhe o caminho salto a salto.</p>
+
+<hr>
+
+<h2>O que é um pacote</h2>
+<p>Quando você abre uma página de 2 MB, ela <strong>não viaja inteira de uma vez</strong>. Ela é quebrada em milhares de <strong>pacotes</strong> de cerca de 1500 bytes cada (o "envelope padrão" da rede, chamado MTU). Cada pacote tem um <em>cabeçalho</em> com as etiquetas — IP de origem, IP de destino, número de sequência — e uma parte com o conteúdo. Quem recebe junta os pacotes na ordem certa, como quem monta um quebra-cabeça numerado.</p>
+<p>É por isso que, se a rede está ruim, uma página "carrega pela metade": alguns pacotes llegaron, outros se perderam no caminho e foram reenviados.</p>
+
+<hr>
+
+<h2>A máquina deste guia: ana@notebook</h2>
+<p>Todas as aulas usam uma <strong>máquina fictícia</strong> que roda aqui mesmo no seu navegador: o <code>notebook</code> da <strong>Ana</strong>. Ela está ligada numa rede local <code>192.168.1.0/24</code>, com o roteador (gateway) em <code>192.168.1.1</code> e DNS em <code>192.168.1.1</code> e <code>8.8.8.8</code>.</p>
+
+<pre class="term">$ hostname
+notebook
+$ ip addr
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc noqueue state UP
+    link/ether aa:bb:cc:dd:ee:ff brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.50/24 scope global eth0</pre>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Peça da rede da Ana</th><th>Endereço</th><th>Papel</th></tr>
+<tr><td>notebook (ela mesma)</td><td><code>192.168.1.50</code></td><td>A máquina que você está usando agora</td></tr>
+<tr><td>roteador / gateway</td><td><code>192.168.1.1</code></td><td>A "porta de saída" da rede local para a internet</td></tr>
+<tr><td>DNS</td><td><code>192.168.1.1</code> e <code>8.8.8.8</code></td><td>Quem traduz nomes (exemplo.com) em IPs</td></tr>
+<tr><td>loopback (a própria máquina)</td><td><code>127.0.0.1</code></td><td>Endereço que aponta para o próprio computador</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Seu primeiro comando: help</h2>
+<p>Toda caixa escura de terminal deste guia é um <strong>simulador</strong> — nada sai do seu navegador. Clique na caixa, digite <code>help</code> e aperte <kbd>Enter</kbd> para ver todos os comandos de rede disponíveis:</p>
+
+<div class="try" data-goal="Comandos disponíveis" data-solucao="help">
+<p class="try-task"><strong>Missão:</strong> digite <code>help</code> e aperte <kbd>Enter</kbd>. Veja a lista de comandos de rede que o simulador entende.</p>
+</div>
+
+<pre class="term">$ help
+Comandos disponíveis:
+  ping HOST [-c N]      testa se o host responde
+  curl [OPÇÕES] URL     faz requisição HTTP (use -i, -v, -X POST, -d '{}')
+  dig HOST [TIPO]       consulta DNS (+short, +trace)
+  ip addr | ip route    seus IPs e rotas
+  ss -tlnp              portas abertas (escuta)
+  …</pre>
+
+<hr>
+
+<h2>E o primeiro ping</h2>
+<p><code>ping</code> é o "alô, tem alguém aí?" da rede: ele manda um pacote de teste e mede se o outro computador responde e em quanto tempo. Experimente pingar um site:</p>
+
+<div class="try" data-goal="64 bytes from" data-solucao="ping exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>ping exemplo.com</code> e aperte <kbd>Enter</kbd>. Cada linha <code>64 bytes from …</code> é uma resposta que voltou.</p>
+</div>
+
+<pre class="term">$ ping exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+64 bytes from 93.184.216.34: icmp_seq=3 ttl=64 time=24.1 ms
+64 bytes from 93.184.216.34: icmp_seq=4 ttl=64 time=23.0 ms
+
+--- exemplo.com ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3000ms</pre>
+
+<p>Repare nas partes: o nome <code>exemplo.com</code> foi traduzido para o IP <code>93.184.216.34</code> (isso é o DNS, próxima aula), cada resposta mostra <code>ttl=64</code> (quantos roteadores o pacote ainda pode atravessar) e o <code>time</code> (ida e volta em milissegundos).</p>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>Rede = computadores trocando dados; internet = a rede de todas as redes, ligada por enlaces que cruzam o mundo.</li>
+  <li>Analogia do correio: dado = carta, pacote = envelope com IP de origem e destino, roteador = centro de distribuição.</li>
+  <li>Arquivos grandes são quebrados em pacotes de ~1500 bytes e remontados no destino.</li>
+  <li>A máquina deste guia é <code>ana@notebook</code>, IP <code>192.168.1.50/24</code>, gateway <code>192.168.1.1</code>.</li>
+  <li>Primeiros comandos no simulador: <code>help</code> (lista de comandos) e <code>ping exemplo.com</code> (o host responde?).</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="modelo-cliente-servidor.html">Cliente e servidor: a dupla de toda requisição</a> — a ideia que explica por que toda conversa na rede tem sempre um lado pedindo e um lado respondendo.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>O que é HTTP — a carta entre navegador e servidor | Guia Redes</title>
+<meta name="description" content="O que é o protocolo HTTP e como funciona a conversa entre cliente e servidor: a requisição (linha de pedido, método GET/POST, cabeçalhos) e a resposta (linha de status 200 OK, cabeçalhos e o corpo). A analogia da carta. Códigos de status comuns (200, 301, 404, 500) e métodos. Na prática com curl -i no simulador: exemplo.com responde 200 OK e /nao-existe responde 404 Not Found. Missões com saída real.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">HTTP</span>: a conversa entre navegador e servidor</h1>
+
+<p class="intro">Depois que o DNS traduz o nome em IP e a porta certa é achada, começa a <strong>conversa de verdade</strong>: o protocolo <strong>HTTP</strong> (HyperText Transfer Protocol). É um formato de <strong>cartas padronizadas</strong>: o cliente envia uma carta de pedido, o servidor responde com uma carta de resposta. Nesta aula você abre as duas cartas.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que é o HTTP: protocolo de pedido/resposta usado por sites e APIs.</li>
+  <li>A <strong>requisição</strong>: linha de pedido (<code>GET / HTTP/1.1</code>), cabeçalhos e (às vezes) corpo.</li>
+  <li>A <strong>resposta</strong>: linha de status (<code>HTTP/1.1 200 OK</code>), cabeçalhos e o corpo (o HTML da página).</li>
+  <li>Métodos principais: <code>GET</code> (pedir), <code>POST</code> (enviar dados), e os códigos de status: 200, 301, 404, 500.</li>
+  <li>Ver a conversa inteira com <code>curl -i</code> no simulador — inclusive um 404 de verdade.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>A analogia da carta</h2>
+<p>O HTTP é como um modelo de carta com campos obrigatórios:</p>
+<ul>
+  <li><strong>A primeira linha do pedido</strong>: <code>GET / HTTP/1.1</code> — "quero (GET) a página inicial (/) usando a versão 1.1 do HTTP".</li>
+  <li><strong>Cabeçalhos do pedido</strong>: <code>Host: exemplo.com</code>, <code>User-Agent: Mozilla/…</code>, <code>Accept: text/html</code> — como o remetente e os bilhetes do envelope.</li>
+  <li><strong>A resposta</strong> vem no mesmo formato: primeira linha com o <strong>status</strong> (<code>HTTP/1.1 200 OK</code> = "deu certo"), cabeçalhos (<code>Content-Type: text/html</code>, <code>Content-Length: 1256</code>) e, no fim, o <strong>corpo</strong>: o HTML da página.</li>
+</ul>
+
+<hr>
+
+<h2>A requisição: o pedido do cliente</h2>
+<dl class="anatomy">
+  <dt>GET</dt><dd>O <strong>método</strong>: a ação. <code>GET</code> = "me dá esse recurso". Outros: <code>POST</code> (envia dados, ex.: formulário de login), <code>PUT</code>, <code>DELETE</code>.</dd>
+  <dt>/caminho</dt><dd>O <strong>recurso</strong> pedido dentro do servidor (a página, a API…).</dd>
+  <dt>HTTP/1.1</dt><dd>A <strong>versão</strong> do protocolo. Hoje sites HTTPS usam <code>HTTP/2</code> ou <code>HTTP/3</code>.</dd>
+  <dt>Host: exemplo.com</dt><dd>Cabeçalho obrigatório que diz <em>qual site</em> dentro do servidor (um mesmo IP pode hospedar vários sites).</dd>
+</dl>
+
+<hr>
+
+<h2>A resposta: o que o servidor manda de volta</h2>
+<pre class="term">$ curl -i exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1256
+Connection: keep-alive
+
+&lt;html&gt;&lt;head&gt;&lt;title&gt;Exemplo&lt;/title&gt;&lt;/head&gt;&lt;body&gt;&lt;h1&gt;Exemplo.com&lt;/h1&gt;&lt;p&gt;Esta é uma página fictícia do simulador.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+<p>Peças da resposta:</p>
+<ul>
+  <li><code>HTTP/1.1 200 OK</code> — a <strong>linha de status</strong>: versão, código numérico e frase. <code>200</code> = deu certo.</li>
+  <li><strong>Cabeçalhos</strong>: <code>Server</code> (quem atendeu), <code>Content-Type</code> (que tipo de arquivo vem), <code>Content-Length</code> (tamanho em bytes).</li>
+  <li><strong>Corpo</strong> (depois da linha em branco): o conteúdo de verdade — aqui, o HTML da página.</li>
+</ul>
+
+<hr>
+
+<h2>Códigos de status: a primeira linha da resposta</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Código</th><th>Significado</th><th>Quando você vê</th></tr>
+<tr><td><code>200 OK</code></td><td>Deu certo, segue o conteúdo</td><td>Quase sempre que tudo funciona</td></tr>
+<tr><td><code>301</code>/<code>308</code></td><td>"Mudei de endereço" (redirecionamento)</td><td>http:// vira https://, ou site mudou de domínio</td></tr>
+<tr><td><code>404 Not Found</code></td><td>"Não achei esse recurso"</td><td>Link quebrado, página apagada</td></tr>
+<tr><td><code>500</code></td><td>Erro interno do servidor</td><td>O site caiu do ar</td></tr>
+</table>
+</div>
+
+<div class="try" data-goal="HTTP/1.1 200 OK" data-solucao="curl -i exemplo.com">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i exemplo.com</code> e aperte <kbd>Enter</kbd>. A primeira linha da resposta é o status <code>HTTP/1.1 200 OK</code> — o servidor achou a página.</p>
+</div>
+
+<hr>
+
+<h2>Quando o recurso não existe: o 404</h2>
+<p>Pedir um caminho que o servidor não tem devolve <code>404 Not Found</code> — a página do erro:</p>
+<pre class="term">$ curl -i http://exemplo.com/nao-existe
+HTTP/1.1 404 Not Found
+Server: nginx/1.25.3
+Content-Type: text/html
+
+&lt;html&gt;&lt;body&gt;&lt;h1&gt;404 Not Found&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</pre>
+
+<div class="try" data-goal="404 Not Found" data-solucao="curl -i http://exemplo.com/nao-existe">
+<p class="try-task"><strong>Missão:</strong> digite <code>curl -i http://exemplo.com/nao-existe</code> e aperte <kbd>Enter</kbd>. O servidor responde <code>404 Not Found</code> — o recurso não existe, mas a conversa funcionou.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>HTTP é o protocolo de pedido/resposta da web: o cliente manda uma requisição, o servidor manda uma resposta.</li>
+  <li>Requisição: <code>GET /caminho HTTP/1.1</code> + cabeçalhos (Host, User-Agent…). Métodos: GET, POST, PUT, DELETE…</li>
+  <li>Resposta: linha de status (<code>200 OK</code>, <code>404 Not Found</code>, <code>500</code>…) + cabeçalhos + corpo (o HTML).</li>
+  <li><code>curl -i exemplo.com</code> mostra a resposta inteira: status, cabeçalhos e corpo.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="primeiro-ping.html">Seu primeiro ping</a> — antes de falar HTTP, vamos testar se o servidor responde com o comando mais famoso de redes.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cabeçalhos (headers) HTTP comuns (cola) — Host, Content-Type, Set-Cookie, Cache-Control… | Guia Redes</title>
+<meta name="description" content="Cola dos cabeçalhos HTTP mais usados: de requisição (Host, User-Agent, Accept, Content-Type, Authorization, Cookie, Referer) e de resposta (Content-Type, Content-Length, Server, Set-Cookie, Location, Cache-Control, ETag, Strict-Transport-Security, CORS). Exemplos reais de curl -i e curl -v, com o significado de cada um e missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1><span class="hl">Headers HTTP</span> comuns (cola)</h1>
+
+<p class="intro">Uma conversa HTTP é feita de <strong>headers</strong> (cabeçalhos) + corpo. Pense nos headers como o <strong>envelope de uma carta</strong>: diz quem envia, quem recebe, o que tem dentro e como tratar — o corpo (a carta em si) vem depois de uma linha em branco. No pedido, os headers vão prefixados de <code>&gt;</code>; na resposta, de <code>&lt;</code> (veja com <code>curl -v</code>).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os headers de <strong>requisição</strong> que você mais usa: <code>Host</code>, <code>User-Agent</code>, <code>Accept</code>, <code>Content-Type</code>, <code>Authorization</code>, <code>Cookie</code>.</li>
+  <li>Os headers de <strong>resposta</strong> mais comuns: <code>Content-Type</code>, <code>Content-Length</code>, <code>Server</code>, <code>Set-Cookie</code>, <code>Location</code>, <code>Cache-Control</code>, <code>ETag</code>, <code>Strict-Transport-Security</code>.</li>
+  <li>Como ler tudo isso na prática: <code>curl -i</code> (resposta) e <code>curl -v</code> (ida e volta).</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Uma conversa real, lado a lado</h2>
+<pre class="term">$ curl -v https://exemplo.com
+* Trying 93.184.216.34:443...
+* Connected to exemplo.com (93.184.216.34) port 443
+&gt; GET / HTTP/1.1            « linha de pedido: método + caminho + versão
+&gt; Host: exemplo.com         « header de requisição
+&gt; User-Agent: curl/8.5.0
+&gt; Accept: */*
+&gt;
+&lt; HTTP/2 200               « linha de status da resposta
+&lt; server: nginx/1.25.3
+&lt; content-type: text/html; charset=UTF-8
+&lt; strict-transport-security: max-age=31536000
+&lt;
+&lt;html&gt;…&lt;/html&gt;             « corpo (a página em si)</pre>
+
+<hr>
+
+<h2>Headers de requisição (quem pede)</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Header</th><th>Exemplo</th><th>Para que serve</th></tr>
+<tr><td><code>Host</code></td><td><code>Host: api.exemplo.com</code></td><td>Diz qual site dentro do servidor (um mesmo IP pode hospedar vários sites — é o "nome no interfone"). <strong>Obrigatório</strong>.</td></tr>
+<tr><td><code>User-Agent</code></td><td><code>User-Agent: curl/8.5.0</code></td><td>Identifica quem está pedindo (navegador, app, script).</td></tr>
+<tr><td><code>Accept</code></td><td><code>Accept: application/json</code></td><td>Diz o que o cliente aceita receber (HTML, JSON, imagens…). <code>*/*</code> = qualquer coisa.</td></tr>
+<tr><td><code>Content-Type</code></td><td><code>Content-Type: application/json</code></td><td>Diz o formato do <strong>corpo enviado</strong> (JSON, formulário, arquivo…).</td></tr>
+<tr><td><code>Content-Length</code></td><td><code>Content-Length: 15</code></td><td>Tamanho do corpo em bytes (o servidor usa para saber onde o corpo acaba).</td></tr>
+<tr><td><code>Authorization</code></td><td><code>Authorization: Bearer eyJ…</code></td><td>Leva o token/senha da autenticação (API).</td></tr>
+<tr><td><code>Cookie</code></td><td><code>Cookie: sessao=abc123</code></td><td>Leva os cookies da sessão de volta ao servidor (aula <a href="cookies-sessoes.html">cookies e sessões</a>).</td></tr>
+<tr><td><code>Referer</code></td><td><code>Referer: https://google.com/…</code></td><td>De qual página o pedido veio.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Headers de resposta (quem atende)</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Header</th><th>Exemplo</th><th>Para que serve</th></tr>
+<tr><td><code>Content-Type</code></td><td><code>Content-Type: text/html; charset=UTF-8</code></td><td>Formato do corpo que veio (HTML, JSON, imagem…). O navegador usa para decidir como exibir.</td></tr>
+<tr><td><code>Content-Length</code></td><td><code>Content-Length: 1256</code></td><td>Tamanho do corpo em bytes.</td></tr>
+<tr><td><code>Server</code></td><td><code>Server: nginx/1.25.3</code></td><td>Qual software atendeu (informativo — nem sempre diz a verdade de propósito).</td></tr>
+<tr><td><code>Set-Cookie</code></td><td><code>Set-Cookie: sessao=abc; HttpOnly; Path=/</code></td><td>O servidor manda um cookie novo para o navegador guardar.</td></tr>
+<tr><td><code>Location</code></td><td><code>Location: https://exemplo.com/novo</code></td><td>Para onde seguir num redirecionamento 3xx.</td></tr>
+<tr><td><code>Cache-Control</code></td><td><code>Cache-Control: max-age=3600</code></td><td>Quanto tempo o navegador pode guardar a resposta em cache (sem pedir de novo).</td></tr>
+<tr><td><code>ETag</code></td><td><code>ETag: "a1b2c3"</code></td><td>Uma "impressão digital" do arquivo: se não mudou, o servidor responde 304 em vez de mandar tudo de novo.</td></tr>
+<tr><td><code>Strict-Transport-Security</code></td><td><code>Strict-Transport-Security: max-age=31536000</code></td><td>"Daqui para frente, só fale comigo por HTTPS" (obrigatório em sites HTTPS bons).</td></tr>
+<tr><td><code>Access-Control-Allow-Origin</code></td><td><code>Access-Control-Allow-Origin: *</code></td><td>CORS: quais sites podem chamar essa API pelo navegador.</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Na prática: curl -i mostra os headers da resposta</h2>
+<pre class="term">$ curl -i http://exemplo.com
+HTTP/1.1 200 OK
+Server: nginx/1.25.3
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1256
+Connection: keep-alive
+
+&lt;html&gt;…&lt;/html&gt;</pre>
+
+<div class="try" data-goal="Server: nginx" data-solucao="curl -i http://exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i http://exemplo.com</code> e ache o header <code>Server:</code> na resposta (diz quem atendeu).</p>
+</div>
+
+<div class="try" data-goal="content-type: application/json" data-solucao="curl -i https://api.exemplo.com/usuarios">
+<p class="try-task"><strong>Missão:</strong> rode <code>curl -i https://api.exemplo.com/usuarios</code> e veja o header <code>content-type: application/json</code> — a resposta é dados, não página.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>HTTP = linha inicial + headers + linha em branco + corpo. Headers são o "envelope"; o corpo é a "carta".</li>
+  <li>Requisição leva <code>Host</code> (obrigatório), <code>Accept</code>, <code>Authorization</code>, <code>Cookie</code>…; resposta traz <code>Content-Type</code>, <code>Set-Cookie</code>, <code>Location</code>, <code>Cache-Control</code>…</li>
+  <li>Veja resposta com <code>curl -i URL</code>; a conversa inteira com <code>curl -v URL</code>.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="ref-registros-dns.html">Tipos de registro DNS (cola)</a> — A, AAAA, CNAME, MX, TXT, NS, SOA, PTR: o que cada um guarda.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

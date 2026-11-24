@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scan de portas ético (nmap) | Guia Redes</title>
+<meta name="description" content="Scan de portas com nmap explicado com a analogia de bater nas portas de um prédio — e a ética/legalidade: só escaneie o que é seu ou com autorização por escrito (no Brasil, invasão de dispositivo informático é crime). Tipos de scan (SYN, connect, UDP, -sV, -O, -p), estados open/closed/filtered, e por que usar em labs (HackTheBox, Metasploitable, seu homelab). Missões com nmap e nc no simulador.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Scan de portas <span class="hl">ético</span> (nmap)</h1>
+
+<p class="intro">Uma porta aberta é como uma porta destrancada: quem bate descobre que tem alguém ali — e às vezes descobre <strong>qual serviço</strong> (e qual versão vulnerável). O <code>nmap</code> é a ferramenta clássica de scan de portas. Analogia: é como andar por um prédio batendo em cada porta para ver quais estão abertas. O síndico do prédio (você, no seu servidor) usa isso para se proteger; um estranho que faz isso no prédio dos outros está cometendo crime.</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>O que o nmap faz e os tipos de scan: <code>-sS</code> (SYN), <code>-sT</code> (connect), <code>-sU</code> (UDP), <code>-sn</code> (ping sweep);</li>
+  <li>Opções úteis: <code>-p</code> (portas), <code>-sV</code> (versão do serviço), <code>-O</code> (sistema operacional), <code>--script</code> (NSE);</li>
+  <li>Os estados das portas: <strong>open, closed, filtered</strong>;</li>
+  <li><strong>A regra de ouro da ética</strong>: só escaneie o que é seu ou com autorização por escrito;</li>
+  <li>Onde treinar legalmente: seu homelab, VMs, HackTheBox, TryHackMe.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>Ética e lei primeiro</h2>
+<p>Scan de portas em computadores ou redes <strong>que não são seus, sem permissão</strong>, é crime no Brasil: a Lei nº 12.737/2012 (Lei Carolina Dieckmann) tipifica a invasão de dispositivo informático, e o Marco Civil da Internet (Lei 12.965/2014) trata das responsabilidades. Mesmo um "só um ping" ou um scan "inofensivo" pode ser caracterizado como tentativa de invasão, gerar boletim de ocorrência e processo. <strong>Regra prática</strong>: só escaneie (1) sua própria máquina/rede, (2) ambientes que você montou para aprender (VMs, homelab), ou (3) alvos com <strong>autorização por escrito</strong> (programas de bug bounty como HackerOne/Bugcrowd, ou o contrato de pentest da empresa). Provedores de nuvem também costumam exigir avisar antes de escanear seus propios recursos.</p>
+
+<div class="warning">
+<strong>Scan em produção dos outros = problema para você</strong>
+<p>Além da questão legal, scans agressivos disparam alarmes de IDS/IPS, podem derrubar serviços frágeis (e virar um DDoS acidental — aula <a href="ddos.html">DDoS</a>) e queimam sua reputação na comunidade de segurança. Profissional de segurança ético = permissão, escopo combinado e relatório.</p>
+</div>
+
+<hr>
+
+<h2>Como o nmap funciona</h2>
+<p>O nmap manda pacotes "sonda" para as portas do alvo e interpreta a resposta. Os principais tipos:</p>
+
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Comando</th><th>Tipo de scan</th><th>Como funciona</th></tr>
+<tr><td><code>nmap exemplo.com</code></td><td>TCP SYN (-sS, padrão)</td><td>Manda SYN; se receber SYN-ACK, a porta está <strong>open</strong>; manda RST em vez de completar o handshake (rápido e discreto).</td></tr>
+<tr><td><code>nmap -sT exemplo.com</code></td><td>TCP connect</td><td>Usa a conexão TCP normal do sistema (completa o handshake) — mais barulhento, não precisa de root.</td></tr>
+<tr><td><code>nmap -sU exemplo.com</code></td><td>UDP</td><td>Manda datagramas UDP; porta silenciosa pode ser open ou filtrada (UDP não confirma receipt).</td></tr>
+<tr><td><code>nmap -sn 192.168.1.0/24</code></td><td>Ping sweep</td><td>Só descobre quais máquinas da rede estão vivas (sem escanear portas).</td></tr>
+<tr><td><code>nmap -p 22,80,443 exemplo.com</code></td><td>Portas específicas</td><td>Escaneia só as portas indicadas (<code>-p-</code> = todas as 65535).</td></tr>
+<tr><td><code>nmap -sV exemplo.com</code></td><td>Detecção de versão</td><td>Envia sondas e tenta identificar o serviço e a versão (ex.: <code>nginx 1.25.3</code>) — útil para achar versão vulnerável.</td></tr>
+<tr><td><code>nmap -O exemplo.com</code></td><td>Detecção de SO</td><td>Analisa a pilha TCP/IP (TTL, ventana…) para chutar o sistema operacional.</td></tr>
+<tr><td><code>nmap --script vuln exemplo.com</code></td><td>NSE (scripts)</td><td>Biblioteca de scripts prontos (detectar vulnerabilidades, banners, etc.).</td></tr>
+</table>
+</div>
+
+<h3>Os três estados de uma porta</h3>
+<ul>
+  <li><strong>open</strong>: há um serviço escutando e respondeu — é uma porta que precisa de senha forte, patch em dia e, se não for pública, firewall na frente;</li>
+  <li><strong>closed</strong>: a máquina respondeu "não tem ninguém aqui", mas está viva — porta fechada, ok;</li>
+  <li><strong>filtered</strong>: ninguém respondeu (firewall descartou) — o scan não sabe se está aberta; comum atrás de firewall (aula <a href="firewall-iptables.html">firewall</a>).</li>
+</ul>
+
+<hr>
+
+<h2>Na prática (no simulador)</h2>
+
+<div class="try" data-goal="Nmap scan report" data-solucao="nmap exemplo.com">
+<p class="try-task"><strong>Missão:</strong> rode <code>nmap exemplo.com</code> e veja o relatório <code>Nmap scan report for exemplo.com</code> com as portas 80 e 443 abertas (open). Experimente também <code>nmap google.com</code>.</p>
+</div>
+
+<pre class="term">$ nmap exemplo.com
+Nmap scan report for exemplo.com (93.184.216.34)
+Host is up (0.023s latency).
+PORT    STATE  SERVICE
+80/tcp  open   http
+443/tcp open   https
+
+Nmap done: 1 IP address (1 host up) scanned in 2.45 seconds</pre>
+
+<div class="try" data-goal="succeeded" data-solucao="nc -zv exemplo.com 443">
+<p class="try-task"><strong>Missão:</strong> depois do nmap, confirme uma porta específica com <code>nc -zv exemplo.com 443</code> — a saída <code>succeeded!</code> confirma que a 443 aceita conexão. rode <code>nc -zv exemplo.com 22</code> para ver a diferença de uma porta fechada.</p>
+</div>
+
+<hr>
+
+<h2>Depois do scan: o que fazer</h2>
+<ul>
+  <li>Porta aberta que não deveria estar pública → feche no <a href="firewall-iptables.html">firewall</a>;</li>
+  <li>Serviço com versão antiga/vulnerável → atualize ou isole;</li>
+  <li>Serviço inútil ligado → desligue (cada porta aberta é uma porta a mais para atacar);</li>
+  <li>Documente tudo: um scan seu serve de auditoria — rode ele de tempos em tempos na sua própria máquina (<code>nmap 127.0.0.1</code> ou <code>ss -tlnp</code> para ver só as portas locais).</li>
+</ul>
+
+<div class="warning">
+<strong>Modo agressivo (-T5, --min-rate alto) é para o seu lab, não para a internet</strong>
+<p>O nmap tem níveis de velocidade de <code>-T0</code> (paranoico) a <code>-T5</code> (insano). Em produção alheia, scan rápido demais vira flood e pode derrubar o alvo — além de ser interpretado como ataque. Use velocidade padrão, ou lenta, fora do seu ambiente controlado.</p>
+</div>
+
+<hr>
+
+<h2>Resumo</h2>
+<ul>
+  <li>nmap escaneia portas: SYN (-sS), connect (-sT), UDP (-sU), ping sweep (-sn), portas específicas (-p), versões (-sV), SO (-O), scripts NSE.</li>
+  <li>Estados: <strong>open</strong> (serviço escutando), <strong>closed</strong> (fechada), <strong>filtered</strong> (firewall barrou a sonda).</li>
+  <li><strong>Ética/lei</strong>: só escaneie o que é seu ou com autorização por escrito — no Brasil, invasão de dispositivo informático é crime (Lei 12.737/2012).</li>
+  <li>Treine em casa: VMs, homelab, HackTheBox/TryHackMe. Em produção, use velocidade padrão e tenha escopo combinado.</li>
+</ul>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="ddos.html">DDoS: o que é e como se proteger</a> — quando milhares de máquinas batem na sua porta ao mesmo tempo.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>

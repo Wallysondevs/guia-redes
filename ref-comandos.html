@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comandos de rede (cola) — ping, curl, dig, ss, traceroute, nmap e mais | Guia Redes</title>
+<meta name="description" content="Cola de consulta rápida dos comandos de rede do Linux: diagnóstico (ping, traceroute, dig, nslookup, curl, wget, nc, telnet, nmap, tcpdump, whois), configuração e consulta local (ip, ifconfig, ss, netstat, route, arp, hostname, cat /etc/hosts, cat /etc/resolv.conf, ssh) e utilidades (clear, echo, help, history, exit) — sintaxe, exemplo prático e o que cada um faz. Inclui o fluxo de diagnóstico de um problema de rede e missões no terminal simulado.">
+<link rel="stylesheet" href="assets/style.css?v=1">
+<script>try{var t=localStorage.getItem("tema");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{history.scrollRestoration="manual"}catch(e){}(function(){var n=0;function t(){window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body&&(document.body.scrollTop=0);if(++n<60)setTimeout(t,50)}t();window.addEventListener("pagehide",function(){window.scrollTo(0,0);document.documentElement.scrollTop=0;});window.addEventListener("pageshow",function(){window.scrollTo(0,0)});window.addEventListener("load",function(){window.scrollTo(0,0)});})();document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href]"):null;if(a){var h=a.getAttribute("href")||"";if(/[.]html($|[?#])/.test(h)&&a.host===location.host){window.scrollTo(0,0);document.documentElement.scrollTop=0;}}});</script>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" id="sidebar" aria-label="Tópicos"></nav>
+<main class="main">
+<div class="content">
+
+<div class="pager"></div>
+
+<h1>Comandos de <span class="hl">rede</span> (cola)</h1>
+
+<p class="intro">Esta é a sua <strong>cola de consulta rápida</strong>: os comandos de rede que você mais vai usar no terminal, separados por categoria, com sintaxe, exemplo prático e o que cada um faz. Não decore — guarde esta página nos favoritos. A regra de bolso da Ana quando trava: <code>ping</code> (responde?), <code>dig</code> (resolve?), <code>curl</code> (o serviço HTTP responde?), <code>ss</code> (a porta está aberta aqui?).</p>
+
+<div class="note">
+<strong>Você vai aprender</strong>
+<ul>
+  <li>Os comandos de <strong>diagnóstico</strong>: <code>ping</code>, <code>traceroute</code>, <code>dig</code>, <code>nslookup</code>, <code>curl</code>, <code>wget</code>, <code>nc</code>, <code>telnet</code>, <code>nmap</code>, <code>tcpdump</code>, <code>whois</code>.</li>
+  <li>Os de <strong>configuração e consulta local</strong>: <code>ip</code>, <code>ifconfig</code>, <code>ss</code>, <code>netstat</code>, <code>route</code>, <code>arp</code>, <code>hostname</code>, <code>cat /etc/hosts</code>, <code>cat /etc/resolv.conf</code>, <code>ssh</code>.</li>
+  <li>O fluxo de diagnóstico na ordem certa (a seção abaixo).</li>
+  <li>Referências cruzadas: <a href="ref-portas.html">portas comuns</a>, <a href="ref-status-http.html">status HTTP</a>, <a href="ref-headers.html">headers</a>, <a href="ref-registros-dns.html">registros DNS</a>, <a href="problemas.html">problemas comuns</a>.</li>
+</ul>
+</div>
+
+<hr>
+
+<h2>O fluxo de diagnóstico (use nesta ordem)</h2>
+<pre class="term">$ ping exemplo.com            « 1. a máquina responde? (ICMP passa)
+$ dig exemplo.com +short      « 2. o nome resolve para um IP?
+$ curl -i https://exemplo.com « 3. o serviço HTTP responde? qual status?
+$ traceroute exemplo.com      « 4. onde o caminho para no meio?
+$ ss -tlnp                    « 5. e aqui na minha máquina, as portas estão abertas?</pre>
+<p>Se o passo 1 falha mas o 2 funciona, o problema é ICMP bloqueado (firewall) — não necessariamente a máquina está fora. Se o 2 falha, é DNS (veja <a href="problemas.html">problemas comuns</a>).</p>
+
+<div class="try" data-goal="Comandos disponíveis" data-solucao="help">
+<p class="try-task"><strong>Missão:</strong> rode <code>help</code> no terminal simulado e veja a lista de comandos que ele entende (é um subconjunto desta cola).</p>
+</div>
+
+<hr>
+
+<h2>Diagnóstico de conectividade</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Sintaxe</th><th>Exemplo</th><th>O que faz / saída típica</th></tr>
+<tr><td><code>ping [-c N] HOST</code></td><td><code>ping -c 4 exemplo.com</code></td><td>Envia pacotes ICMP e mede resposta. Linhas <code>64 bytes from …: icmp_seq=1 ttl=64 time=23.4 ms</code> = resposta chegando; resumo final com <code>% packet loss</code>. <code>-c 4</code> limita a 4 pacotes.</td></tr>
+<tr><td><code>traceroute HOST</code></td><td><code>traceroute google.com</code></td><td>Mostra cada "salto" (roteador) até o destino, com 3 tempos em ms por salto. Serve para achar <em>onde</em> a rota quebra. Equivalente moderno: <code>tracepath</code>.</td></tr>
+<tr><td><code>curl [OPÇÕES] URL</code></td><td><code>curl -i https://exemplo.com</code></td><td>Faz uma requisição HTTP e imprime a resposta. <code>-i</code> inclui headers (1ª linha = status, ex.: <code>HTTP/1.1 200 OK</code>); <code>-v</code> mostra a conversa; <code>-X POST -d '{}'</code> envia dados. Erros comuns: <code>(6) Could not resolve host</code>, <code>(7) Connection refused</code>.</td></tr>
+<tr><td><code>wget URL</code></td><td><code>wget http://exemplo.com/arquivo.zip</code></td><td>Baixa um arquivo pela rede e salva no disco (mostra progresso e <code>200 OK</code>). Bom para downloads em servidor, sem interface gráfica.</td></tr>
+<tr><td><code>nc -zv HOST PORTA</code></td><td><code>nc -zv localhost 8000</code></td><td>Testa se uma porta TCP abre, sem mandar dados: imprime <code>Connection to … port [tcp/*] succeeded!</code> ou <code>refused</code>/<code>timed out</code>.</td></tr>
+<tr><td><code>telnet HOST PORTA</code></td><td><code>telnet exemplo.com 80</code></td><td>Versão antiga do nc: abre uma conexão TCP "crua" (dá para digitar comandos HTTP na mão). <code>Connected to …</code> = porta aberta. <strong>Não use para senhas</strong> — vai em texto puro.</td></tr>
+<tr><td><code>nmap [OPÇÕES] HOST</code></td><td><code>nmap localhost</code> / <code>nmap -p 80,443 exemplo.com</code></td><td>Escaneia portas do host e lista as abertas com o serviço (ex.: <code>22/tcp open ssh</code>). <strong>Use só em máquinas suas</strong> (aula <a href="scan-portas-etico.html">scan ético</a>).</td></tr>
+<tr><td><code>tcpdump -i IFACE [filtro]</code></td><td><code>sudo tcpdump -i eth0 port 53</code></td><td>Captura os pacotes que passam pela interface em tempo real (cada linha = 1 pacote, com IPs e portas). Filtros: <code>host X</code>, <code>port N</code>, <code>tcp</code>/<code>udp</code>. <kbd>Ctrl</kbd>+<kbd>C</kbd> para. Aula <a href="tcpdump-intro.html">tcpdump</a>.</td></tr>
+</table>
+</div>
+
+<pre class="term">$ ping -c 2 exemplo.com
+PING exemplo.com (93.184.216.34) 56(84) bytes of data.
+64 bytes from 93.184.216.34: icmp_seq=1 ttl=64 time=23.4 ms
+64 bytes from 93.184.216.34: icmp_seq=2 ttl=64 time=22.9 ms
+--- exemplo.com ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss
+$ traceroute exemplo.com
+traceroute to exemplo.com (93.184.216.34), 30 hops max
+ 1  192.168.1.1      2.1 ms  2.3 ms  2.0 ms
+ 2  189.50.10.1      8.4 ms  8.1 ms  8.9 ms
+ 3  200.147.67.142  15.2 ms 15.0 ms 15.6 ms
+ 4  93.184.216.34   23.4 ms 23.1 ms 23.0 ms</pre>
+
+<hr>
+
+<h2>DNS</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Sintaxe</th><th>Exemplo</th><th>O que faz / saída típica</th></tr>
+<tr><td><code>dig HOST [TIPO] [+short|+trace]</code></td><td><code>dig exemplo.com +short</code></td><td>Consulta DNS completa. <code>+short</code> imprime só o IP (<code>93.184.216.34</code>); <code>MX</code>, <code>TXT</code>, <code>NS</code> pedem tipos específicos (veja <a href="ref-registros-dns.html">registros DNS</a>); <code>+trace</code> segue a delegação desde a raiz. Domínio inexistente → <code>status: NXDOMAIN</code>.</td></tr>
+<tr><td><code>dig @SERVIDOR HOST</code></td><td><code>dig @8.8.8.8 exemplo.com</code></td><td>Consulta um servidor DNS específico (burla o padrão do sistema — ótimo para testar se o problema é o DNS local).</td></tr>
+<tr><td><code>nslookup HOST</code></td><td><code>nslookup exemplo.com</code></td><td>Versão simples do dig: mostra <code>Server:</code> usado e <code>Non-authoritative answer: Name / Address</code>. Falha → <code>** server can't find …: NXDOMAIN</code>.</td></tr>
+<tr><td><code>whois DOMÍNIO</code></td><td><code>whois exemplo.com</code></td><td>Consulta o registro do domínio (quem registrou, datas, servidores de nome).</td></tr>
+</table>
+</div>
+
+<pre class="term">$ dig exemplo.com +short
+93.184.216.34
+$ dig exemplo.com
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR
+;; QUESTION SECTION:
+;exemplo.com.                   IN      A
+;; ANSWER SECTION:
+exemplo.com.            3600    IN      A       93.184.216.34</pre>
+
+<hr>
+
+<h2>Configuração e estado da máquina local</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Sintaxe</th><th>Exemplo</th><th>O que faz / saída típica</th></tr>
+<tr><td><code>ip addr</code> (ou <code>ip a</code>)</td><td><code>ip addr</code></td><td>Lista interfaces e IPs: <code>inet 192.168.1.50/24</code> na <code>eth0</code>, <code>127.0.0.1/8</code> na <code>lo</code>.</td></tr>
+<tr><td><code>ip route</code></td><td><code>ip route</code></td><td>Tabela de rotas: <code>default via 192.168.1.1 dev eth0</code> (o gateway padrão) + a rota da rede local.</td></tr>
+<tr><td><code>ifconfig</code></td><td><code>ifconfig</code></td><td>Versão antiga do <code>ip addr</code> (pacote net-tools) — ainda existe em muito sistema.</td></tr>
+<tr><td><code>ss -tlnp</code></td><td><code>ss -tlnp</code></td><td>Portas TCP em escuta (LISTEN) com processo: <code>0.0.0.0:22 users:(("sshd",1012))</code>. Adicione <code>-u</code> para UDP, <code>-a</code> para todas as conexões.</td></tr>
+<tr><td><code>netstat -tlnp</code></td><td><code>netstat -tlnp</code></td><td>Equivalente antigo do <code>ss</code> (mesma saída neste guia).</td></tr>
+<tr><td><code>route -n</code></td><td><code>route -n</code></td><td>Tabela de rotas antiga (complemento de <code>ip route</code>): colunas Destination/Gateway/Iface.</td></tr>
+<tr><td><code>arp -a</code></td><td><code>arp -a</code></td><td>Tabela ARP: IPs da rede local que a máquina já contatou, com o MAC de cada um.</td></tr>
+<tr><td><code>hostname</code></td><td><code>hostname</code></td><td>Mostra o nome da máquina (<code>notebook</code>).</td></tr>
+<tr><td><code>cat /etc/hosts</code></td><td><code>cat /etc/hosts</code></td><td>Apelidos locais de IP (consultados antes do DNS). Formato: <code>IP   nome</code>.</td></tr>
+<tr><td><code>cat /etc/resolv.conf</code></td><td><code>cat /etc/resolv.conf</code></td><td>Servidores DNS configurados: linhas <code>nameserver …</code> (ex.: 192.168.1.1 e 8.8.8.8).</td></tr>
+<tr><td><code>ssh USER@HOST</code></td><td><code>ssh ana@192.168.1.60</code></td><td>Abre um terminal seguro na máquina remota (porta 22). Primeira vez pergunta a autenticidade da chave do host.</td></tr>
+</table>
+</div>
+
+<pre class="term">$ ip addr
+2: eth0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 state UP
+    inet 192.168.1.50/24 scope global eth0
+$ cat /etc/resolv.conf
+nameserver 192.168.1.1
+nameserver 8.8.8.8
+search localdomain</pre>
+
+<hr>
+
+<h2>Utilidades de terminal</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Comando</th><th>Para que serve</th></tr>
+<tr><td><code>help</code></td><td>No simulador, lista os comandos de rede disponíveis.</td></tr>
+<tr><td><code>clear</code> (ou <kbd>Ctrl</kbd>+<kbd>L</kbd>)</td><td>Limpa a tela do terminal.</td></tr>
+<tr><td><code>echo TEXTO</code></td><td>Imprime TEXTO (útil em scripts: <code>echo "192.168.1.60 meusite.local" &gt;&gt; /etc/hosts</code>).</td></tr>
+<tr><td><code>history</code></td><td>Lista os comandos já digitados nesta sessão; <kbd>↑</kbd>/<kbd>↓</kbd> navegam por eles.</td></tr>
+<tr><td><code>exit</code></td><td>Sai do terminal/da sessão SSH.</td></tr>
+<tr><td><code>man COMANDO</code> / <code>COMANDO --help</code></td><td>A ajuda oficial de qualquer comando (na máquina real).</td></tr>
+</table>
+</div>
+
+<hr>
+
+<h2>Combinações rápidas que resolvem 90% dos casos</h2>
+<div class="table-wrap">
+<table class="ref">
+<tr><th>Situação</th><th>Comando</th></tr>
+<tr><td>"O site não abre" — por onde começar?</td><td><code>ping exemplo.com</code> → <code>dig exemplo.com +short</code> → <code>curl -i https://exemplo.com</code></td></tr>
+<tr><td>Testar se meu servidor local subiu</td><td><code>ss -tlnp | grep 8000</code> e <code>curl -i localhost:8000</code></td></tr>
+<tr><td>Descobrir quem está usando uma porta</td><td><code>ss -tlnp | grep :8000</code> (mostra o processo)</td></tr>
+<tr><td>Ver se o DNS local está com problema</td><td><code>dig @8.8.8.8 exemplo.com +short</code> (se responder, o problema é o DNS padrão)</td></tr>
+<tr><td>Ver o caminho dos pacotes até um host</td><td><code>traceroute exemplo.com</code></td></tr>
+<tr><td>Baixar um arquivo grande no servidor</td><td><code>wget -c URL</code> (o <code>-c</code> continua de onde parou)</td></tr>
+<tr><td>Ver os pacotes entrando na placa de rede</td><td><code>sudo tcpdump -i eth0</code></td></tr>
+</table>
+</div>
+
+<div class="tip"><strong>Próxima aula:</strong> <a href="ref-portas.html">Portas comuns (cola)</a> — 20/21 FTP, 22 SSH, 25 SMTP, 53 DNS, 80 HTTP, 443 HTTPS, 3306 MySQL, 5432 PostgreSQL, 6379 Redis, 8080… e a diferença entre porta bem-conhecida, registrada e dinâmica.</div>
+
+</div>
+</main>
+</div>
+<script src="assets/site.js?v=1"></script>
+</body>
+</html>
